@@ -1946,6 +1946,7 @@ GameObject:
   - component: {fileID: 737652283}
   - component: {fileID: 737652285}
   - component: {fileID: 737652284}
+  - component: {fileID: 737652286}
   m_Layer: 0
   m_Name: NetworkManager
   m_TagString: Untagged
@@ -2013,7 +2014,7 @@ MonoBehaviour:
   NetworkConfig:
     ProtocolVersion: 0
     NetworkTransport: {fileID: 737652284}
-    PlayerPrefab: {fileID: 0}
+    PlayerPrefab: {fileID: 646752006844783487, guid: fe79b989a8266fc48a0face359c0a4b8, type: 3}
     Prefabs:
       NetworkPrefabsLists:
       - {fileID: 11400000, guid: 3d86b47c9740305478f9c4894d1c79e4, type: 2}
@@ -2040,6 +2041,18 @@ MonoBehaviour:
     OldPrefabList: []
   RunInBackground: 1
   LogLevel: 1
+--- !u!114 &737652286
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 737652282}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 36f94d9fadd254a44b204f99f3e8779f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkStarter
 --- !u!1 &748029636
 GameObject:
   m_ObjectHideFlags: 0
