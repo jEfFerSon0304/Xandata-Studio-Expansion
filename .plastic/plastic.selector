@@ -1,0 +1,4 @@
+repository "Xandata-Studio-Expansion 2025-10-15_15-30-32/Xandata-Studio-Expansion@18968324746433@cloud"
+  path "/"
+    br "/main"
+    co "/main"
