@@ -554,9 +554,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1542618517}
+      - m_Target: {fileID: 1542618518}
         m_TargetAssemblyTypeName: MainMenuController, Assembly-CSharp
-        m_MethodName: BackToMainMenu
+        m_MethodName: QuitGame
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -888,19 +888,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 741702186}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 1542618517}
-        m_TargetAssemblyTypeName: MainMenuController, Assembly-CSharp
-        m_MethodName: StartGame
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &741702186
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1158,7 +1146,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1542618517}
+      - m_Target: {fileID: 1542618518}
         m_TargetAssemblyTypeName: MainMenuController, Assembly-CSharp
         m_MethodName: HostGame
         m_Mode: 1
@@ -1291,7 +1279,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1542618517}
+      - m_Target: {fileID: 1542618518}
         m_TargetAssemblyTypeName: MainMenuController, Assembly-CSharp
         m_MethodName: JoinGame
         m_Mode: 1
@@ -1698,6 +1686,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1542618516}
   - component: {fileID: 1542618517}
+  - component: {fileID: 1542618518}
   m_Layer: 5
   m_Name: MainMenuManager
   m_TagString: Untagged
@@ -1736,7 +1725,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6ca2d052015c48d4980eece16d4bb7ec, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MainMenuController
-  hostJoinPanel: {fileID: 1093887453}
+--- !u!114 &1542618518
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1542618515}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 293b8b091bf184d44996759d429baee8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MainMenuController
 --- !u!1 &1543818923
 GameObject:
   m_ObjectHideFlags: 0
@@ -2115,6 +2115,63 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!1001 &7657002169849125037
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1256303769076108080, guid: 8df8f7bd2be37614983026133c416d79, type: 3}
+      propertyPath: m_Name
+      value: NetworkManager
+      objectReference: {fileID: 0}
+    - target: {fileID: 6837379534573551348, guid: 8df8f7bd2be37614983026133c416d79, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 2574.248
+      objectReference: {fileID: 0}
+    - target: {fileID: 6837379534573551348, guid: 8df8f7bd2be37614983026133c416d79, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 677.96857
+      objectReference: {fileID: 0}
+    - target: {fileID: 6837379534573551348, guid: 8df8f7bd2be37614983026133c416d79, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 120.0689
+      objectReference: {fileID: 0}
+    - target: {fileID: 6837379534573551348, guid: 8df8f7bd2be37614983026133c416d79, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6837379534573551348, guid: 8df8f7bd2be37614983026133c416d79, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6837379534573551348, guid: 8df8f7bd2be37614983026133c416d79, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6837379534573551348, guid: 8df8f7bd2be37614983026133c416d79, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6837379534573551348, guid: 8df8f7bd2be37614983026133c416d79, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6837379534573551348, guid: 8df8f7bd2be37614983026133c416d79, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6837379534573551348, guid: 8df8f7bd2be37614983026133c416d79, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 8df8f7bd2be37614983026133c416d79, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -2123,3 +2180,4 @@ SceneRoots:
   - {fileID: 651667695}
   - {fileID: 2011548984}
   - {fileID: 504879178}
+  - {fileID: 7657002169849125037}

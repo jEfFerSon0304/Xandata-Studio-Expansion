@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 25c330b0237ae66438d8fe127cec6d64, type: 3}
+  m_Name: Eagle
+  m_EditorClassIdentifier: Assembly-CSharp::CharacterDataSO
+  characterName: Eagle
+  characterIcon: {fileID: 21300000, guid: 7f85f7165db2206418cf4fd1689fe2dd, type: 3}
+  characterPrefab: {fileID: 994302198833639633, guid: 5fd9b895b84fccd4ca79786336fb4c02, type: 3}
+  animatorController: {fileID: 0}
+  maxEnergy: 5
