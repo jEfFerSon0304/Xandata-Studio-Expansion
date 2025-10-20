@@ -3,7 +3,8 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class LobbyManager : NetworkBehaviour
+public class LobbyManager : MonoBehaviour
+
 {
     public static LobbyManager Instance;
 
@@ -29,34 +30,51 @@ public class LobbyManager : NetworkBehaviour
         }
     }
 
-    public override void OnNetworkSpawn()
+    private void Start()
     {
-        if (IsServer)
+        // Add callbacks for host
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
         {
             NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
             NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
         }
 
-        // Host sees StartGame; clients see Ready
-        if (IsHost)
+        // Delay the button visibility check slightly, to give Netcode time to initialize
+        Invoke(nameof(RefreshButtonVisibility), 0.1f);
+    }
+
+    private void RefreshButtonVisibility()
+    {
+        if (NetworkManager.Singleton == null)
         {
-            if (readyButton != null) readyButton.SetActive(false);
+            Debug.LogWarning("⚠️ NetworkManager not found — cannot set button visibility.");
+            return;
+        }
+
+        bool isHost = NetworkManager.Singleton.IsHost;
+
+        if (isHost)
+        {
+            Debug.Log("👑 Host confirmed — showing StartGameButton");
             if (startGameButton != null) startGameButton.SetActive(true);
+            if (readyButton != null) readyButton.SetActive(false);
         }
         else
         {
+            Debug.Log("🙋 Client confirmed — showing ReadyButton");
             if (readyButton != null) readyButton.SetActive(true);
             if (startGameButton != null) startGameButton.SetActive(false);
         }
     }
 
 
+
     private void OnClientConnected(ulong clientId)
     {
-        Debug.Log($"🧩 OnClientConnected triggered for ClientId={clientId}, host={IsHost}");
+        Debug.Log($"🧩 OnClientConnected triggered for ClientId={clientId}, host={NetworkManager.Singleton.IsHost}");
 
         // Server creates PlayerData
-        if (IsServer)
+        if (NetworkManager.Singleton.IsServer)
         {
             var playerDataPrefab = Resources.Load<GameObject>("Prefabs/Network/PlayerData");
             if (playerDataPrefab)
@@ -125,37 +143,35 @@ public class LobbyManager : NetworkBehaviour
         Debug.Log($"🎴 [LobbyManager] Updated Player {clientId}'s character to {data.characterName}");
     }
 
-    public void UpdatePlayerReadyStatus(ulong clientId, bool isReady)
-    {
-        if (!playerCards.ContainsKey(clientId))
-        {
-            Debug.LogWarning($"⚠️ No card found for {clientId} when updating ready status.");
-            return;
-        }
-
-        var card = playerCards[clientId];
-        card.UpdateReadyStatus(isReady);
-    }
-
     public void TryStartGame()
     {
-        if (!IsHost) return;
+        if (!NetworkManager.Singleton.IsHost) return;
 
-        foreach (var kvp in NetworkManager.Singleton.ConnectedClientsList)
+        foreach (var kvp in playerCards)
         {
-            var playerObj = kvp.PlayerObject;
-            if (playerObj == null) continue;
-
-            var data = playerObj.GetComponent<PlayerData>();
-            if (data == null || !data.IsReady.Value)
+            if (!kvp.Value.IsReady)
             {
-                Debug.Log("⏳ Not all players are ready yet!");
+                Debug.Log("Not all players are ready!");
                 return;
             }
         }
 
         Debug.Log("✅ All players ready! Starting game...");
-        NetworkManager.SceneManager.LoadScene("GameScene", LoadSceneMode.Single);
+        //NetworkManager.SceneManager.LoadScene("GameScene", LoadSceneMode.Single);
+    }
+
+    public void UpdatePlayerReadyStatus(ulong clientId, bool isReady)
+    {
+        if (!playerCards.ContainsKey(clientId))
+        {
+            Debug.LogWarning($"⚠️ No PlayerCard found for client {clientId} when updating ready status.");
+            return;
+        }
+
+        var card = playerCards[clientId];
+        card.UpdateReadyStatus(isReady);
+
+        Debug.Log($"✅ Updated Player {clientId} ready status → {(isReady ? "Ready" : "Selecting...")}");
     }
 
 }

@@ -372,6 +372,7 @@ MonoBehaviour:
   playerCardsPanel: {fileID: 241577553}
   playerCardPrefab: {fileID: 3266086358856108112, guid: a2ad9cb4f08c8c24384a1f61e209f02f, type: 3}
   startGameButton: {fileID: 1112155350}
+  readyButton: {fileID: 1686454441}
 --- !u!4 &311247494
 Transform:
   m_ObjectHideFlags: 0
@@ -1650,7 +1651,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2025238438}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 54cd69572d22a2743a4e97002fe140d6, type: 3}
   m_Name: 
