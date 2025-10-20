@@ -18,7 +18,10 @@ public class PlayerCardUI : NetworkBehaviour
     private ulong ownerClientId;
 
     public bool IsReady => isReady;
-    public ulong OwnerClientId => ownerClientId;
+
+    private ulong assignedClientId;
+    public ulong AssignedClientId => assignedClientId;
+
 
     // Called by LobbyManager when spawning a player card
     public void AssignClient(ulong clientId)

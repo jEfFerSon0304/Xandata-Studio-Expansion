@@ -1,44 +1,55 @@
+﻿using Unity.Netcode;
+using Unity.Netcode.Transports.UTP;
 using UnityEngine;
-using UnityEngine.SceneManagement;
-using Unity.Netcode;
 
-public class MainMenuController : MonoBehaviour
+public class MenuController : MonoBehaviour
 {
     public void HostGame()
     {
-        EnsureNetworkManager();
+        var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
 
-        if (!NetworkManager.Singleton.IsServer && !NetworkManager.Singleton.IsClient)
+        if (transport != null)
         {
-            NetworkManager.Singleton.StartHost();
+            transport.ConnectionData.Port = 7777; // fixed
+            transport.ConnectionData.Address = "127.0.0.1"; // local
+            Debug.Log("📡 Hosting on port 7777");
         }
 
-        SceneManager.LoadScene("LobbyScene");
+        if (NetworkManager.Singleton.IsListening)
+        {
+            Debug.LogWarning("⚠️ A host is already running! Cannot start another host.");
+            return;
+        }
+
+        if (NetworkManager.Singleton.StartHost())
+        {
+            Debug.Log("👑 Host started successfully!");
+            UnityEngine.SceneManagement.SceneManager.LoadScene("LobbyScene");
+        }
+        else
+        {
+            Debug.LogError("❌ Failed to start host!");
+        }
     }
 
     public void JoinGame()
     {
-        EnsureNetworkManager();
-
-        if (!NetworkManager.Singleton.IsServer && !NetworkManager.Singleton.IsClient)
+        var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
+        if (transport != null)
         {
-            NetworkManager.Singleton.StartClient();
+            transport.ConnectionData.Port = 7777; // must match host
+            transport.ConnectionData.Address = "127.0.0.1"; // host machine
+            Debug.Log("🙋 Connecting to host on port 7777");
         }
 
-        SceneManager.LoadScene("LobbyScene");
-    }
-
-    public void QuitGame()
-    {
-        Application.Quit();
-    }
-
-    private void EnsureNetworkManager()
-    {
-        if (NetworkManager.Singleton == null)
+        if (NetworkManager.Singleton.StartClient())
         {
-            var prefab = Resources.Load<GameObject>("Prefabs/Network/NetworkManager");
-            Instantiate(prefab);
+            Debug.Log("🙋 Joining lobby...");
+            UnityEngine.SceneManagement.SceneManager.LoadScene("LobbyScene");
+        }
+        else
+        {
+            Debug.LogError("❌ Failed to start client!");
         }
     }
 }
