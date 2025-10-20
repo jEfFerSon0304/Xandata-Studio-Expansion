@@ -11,12 +11,22 @@ public class LobbyManager : NetworkBehaviour
     public Transform playerCardsPanel;
     public GameObject playerCardPrefab;
     public GameObject startGameButton;
+    public GameObject readyButton;   // 👈 add this
 
     private Dictionary<ulong, PlayerCardUI> playerCards = new();
 
     private void Awake()
     {
-        Instance = this;
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
+            return;
+        }
     }
 
     public override void OnNetworkSpawn()
@@ -27,17 +37,25 @@ public class LobbyManager : NetworkBehaviour
             NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
         }
 
-        if (!IsHost)
-            startGameButton.SetActive(false);
+        // Host sees StartGame; clients see Ready
+        if (IsHost)
+        {
+            if (readyButton != null) readyButton.SetActive(false);
+            if (startGameButton != null) startGameButton.SetActive(true);
+        }
+        else
+        {
+            if (readyButton != null) readyButton.SetActive(true);
+            if (startGameButton != null) startGameButton.SetActive(false);
+        }
     }
+
 
     private void OnClientConnected(ulong clientId)
     {
+        Debug.Log($"🧩 OnClientConnected triggered for ClientId={clientId}, host={IsHost}");
 
-        Debug.Log($"OnClientConnected triggered on {NetworkManager.Singleton.LocalClientId}, host={IsHost}");
-
-        SpawnPlayerCardClientRpc(clientId);
-
+        // Server creates PlayerData
         if (IsServer)
         {
             var playerDataPrefab = Resources.Load<GameObject>("Prefabs/Network/PlayerData");
@@ -47,6 +65,9 @@ public class LobbyManager : NetworkBehaviour
                 obj.GetComponent<NetworkObject>().SpawnAsPlayerObject(clientId, true);
             }
         }
+
+        // Create the UI card locally on all clients
+        SpawnPlayerCard(clientId);
     }
 
     private void OnClientDisconnected(ulong clientId)
@@ -58,37 +79,30 @@ public class LobbyManager : NetworkBehaviour
         }
     }
 
-    [ClientRpc]
-    private void SpawnPlayerCardClientRpc(ulong clientId)
+    // LOCAL ONLY — spawns card UI, not networked
+    public void SpawnPlayerCard(ulong clientId)
     {
+        if (playerCardsPanel == null || playerCardPrefab == null)
+        {
+            Debug.LogError("❌ Missing PlayerCardsPanel or PlayerCardPrefab reference!");
+            return;
+        }
+
+        if (playerCards.ContainsKey(clientId))
+        {
+            Debug.Log($"ℹ️ Player card already exists for client {clientId}");
+            return;
+        }
+
+        Debug.Log($"🎴 [LobbyManager] Spawning PlayerCard for client {clientId}");
         GameObject cardObj = Instantiate(playerCardPrefab, playerCardsPanel);
         var cardUI = cardObj.GetComponent<PlayerCardUI>();
         cardUI.AssignClient(clientId);
-
         playerCards[clientId] = cardUI;
     }
 
-    public void TryStartGame()
-    {
-        if (!IsHost) return;
-
-        foreach (var kvp in playerCards)
-        {
-            var data = kvp.Value.GetComponent<PlayerCardUI>();
-            if (!data.IsReady)
-            {
-                Debug.Log("Not all players are ready!");
-                return;
-            }
-        }
-
-        Debug.Log("? All players ready! Starting game...");
-        NetworkManager.SceneManager.LoadScene("GameScene", LoadSceneMode.Single);
-    }
-
-    // Called from PlayerData when a player changes character
-    [ClientRpc]
-    public void UpdatePlayerCharacterClientRpc(ulong clientId, int charIndex)
+    // LOCAL UPDATE called when PlayerData.CharacterIndex changes
+    public void UpdatePlayerCharacterLocal(ulong clientId, int charIndex)
     {
         if (!playerCards.ContainsKey(clientId))
         {
@@ -105,33 +119,43 @@ public class LobbyManager : NetworkBehaviour
             return;
         }
 
-        // Update UI on every client
-        card.characterNameText.text = data.characterName;
-        card.characterImage.sprite = data.characterIcon;
+        // Update UI locally
+        card.UpdateCharacterDisplay(charIndex);
 
         Debug.Log($"🎴 [LobbyManager] Updated Player {clientId}'s character to {data.characterName}");
     }
 
-    public void SpawnPlayerCard(ulong clientId)
+    public void UpdatePlayerReadyStatus(ulong clientId, bool isReady)
     {
-        if (playerCardsPanel == null || playerCardPrefab == null)
+        if (!playerCards.ContainsKey(clientId))
         {
-            Debug.LogError("❌ Missing PlayerCardsPanel or PlayerCardPrefab reference!");
+            Debug.LogWarning($"⚠️ No card found for {clientId} when updating ready status.");
             return;
         }
 
-        if (playerCards.ContainsKey(clientId))
+        var card = playerCards[clientId];
+        card.UpdateReadyStatus(isReady);
+    }
+
+    public void TryStartGame()
+    {
+        if (!IsHost) return;
+
+        foreach (var kvp in NetworkManager.Singleton.ConnectedClientsList)
         {
-            Debug.Log($"ℹ️ Player card already exists for client {clientId}");
-            return;
+            var playerObj = kvp.PlayerObject;
+            if (playerObj == null) continue;
+
+            var data = playerObj.GetComponent<PlayerData>();
+            if (data == null || !data.IsReady.Value)
+            {
+                Debug.Log("⏳ Not all players are ready yet!");
+                return;
+            }
         }
 
-        Debug.Log($"🎴 [LobbyManager] Spawning PlayerCard for client {clientId}");
-
-        GameObject cardObj = Instantiate(playerCardPrefab, playerCardsPanel);
-        var cardUI = cardObj.GetComponent<PlayerCardUI>();
-        cardUI.AssignClient(clientId);
-        playerCards[clientId] = cardUI;
+        Debug.Log("✅ All players ready! Starting game...");
+        NetworkManager.SceneManager.LoadScene("GameScene", LoadSceneMode.Single);
     }
 
 }

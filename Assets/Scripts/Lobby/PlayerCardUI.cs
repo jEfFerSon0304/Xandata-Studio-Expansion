@@ -92,4 +92,11 @@ public class PlayerCardUI : NetworkBehaviour
     }
 
     public int GetSelectedCharacterIndex() => currentCharacterIndex;
+
+    public void UpdateReadyStatus(bool ready)
+    {
+        isReady = ready;
+        statusText.text = ready ? "✅ Ready" : "Selecting...";
+    }
+
 }

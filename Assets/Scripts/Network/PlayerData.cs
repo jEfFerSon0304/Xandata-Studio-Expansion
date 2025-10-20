@@ -15,7 +15,7 @@ public class PlayerData : NetworkBehaviour
         if (IsOwner)
             LocalPlayer = this;
 
-        // Try to notify LobbyManager
+        // Create the UI card for this player
         if (LobbyManager.Instance != null)
         {
             LobbyManager.Instance.SpawnPlayerCard(OwnerClientId);
@@ -24,12 +24,37 @@ public class PlayerData : NetworkBehaviour
         {
             Debug.LogWarning("[PlayerData] LobbyManager.Instance is null!");
         }
+
+        // Listen for character index changes to update UI automatically
+        CharacterIndex.OnValueChanged += OnCharacterIndexChanged;
+
+        IsReady.OnValueChanged += OnReadyStateChanged;
+
+        // Update initial display
+        if (LobbyManager.Instance != null)
+            LobbyManager.Instance.UpdatePlayerCharacterLocal(OwnerClientId, CharacterIndex.Value);
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    public void SetCharacterIndexServerRpc(int index)
+    private void OnReadyStateChanged(bool previous, bool current)
     {
-        CharacterIndex.Value = index;
+        if (LobbyManager.Instance != null)
+        {
+            LobbyManager.Instance.UpdatePlayerReadyStatus(OwnerClientId, current);
+        }
+    }
+
+
+    public override void OnNetworkDespawn()
+    {
+        CharacterIndex.OnValueChanged -= OnCharacterIndexChanged;
+    }
+
+    private void OnCharacterIndexChanged(int previous, int current)
+    {
+        if (LobbyManager.Instance != null)
+        {
+            LobbyManager.Instance.UpdatePlayerCharacterLocal(OwnerClientId, current);
+        }
     }
 
     [ServerRpc(RequireOwnership = false)]
@@ -41,7 +66,6 @@ public class PlayerData : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     public void RequestCharacterChangeServerRpc(bool next, ServerRpcParams rpcParams = default)
     {
-        // Make sure our character store exists
         if (CharacterSelectionStore.Instance == null)
         {
             Debug.LogError("[PlayerData] CharacterSelectionStore.Instance is missing!");
@@ -55,7 +79,6 @@ public class PlayerData : NetworkBehaviour
             return;
         }
 
-        // Cycle through the list
         int newIndex = next
             ? (CharacterIndex.Value + 1) % count
             : (CharacterIndex.Value - 1 + count) % count;
@@ -63,12 +86,5 @@ public class PlayerData : NetworkBehaviour
         CharacterIndex.Value = newIndex;
 
         Debug.Log($"[Server] Player {OwnerClientId} switched to character index {newIndex}");
-
-        // Update everyone’s UI (host + clients)
-        if (LobbyManager.Instance != null)
-            LobbyManager.Instance.UpdatePlayerCharacterClientRpc(OwnerClientId, newIndex);
-        else
-            Debug.LogWarning("[PlayerData] LobbyManager.Instance is null when updating character!");
     }
-
 }

@@ -1,42 +1,33 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
-using Unity.Netcode;
 
 public class ReadyButtonController : MonoBehaviour
 {
-    private Button readyButton;
+    private Button button;
     private bool isReady = false;
-    private PlayerCardUI localCard;
 
     void Start()
     {
-        readyButton = GetComponent<Button>();
-        readyButton.onClick.AddListener(ToggleReady);
-
-        Invoke(nameof(FindLocalCard), 0.5f);
+        button = GetComponent<Button>();
+        button.onClick.AddListener(OnReadyClicked);
     }
 
-    void FindLocalCard()
+    private void OnReadyClicked()
     {
-        foreach (var card in FindObjectsOfType<PlayerCardUI>())
+        if (PlayerData.LocalPlayer == null)
         {
-            if (card.OwnerClientId == NetworkManager.Singleton.LocalClientId)
-            {
-                localCard = card;
-                break;
-            }
-        }
-    }
-
-    void ToggleReady()
-    {
-        if (localCard == null)
-        {
-            FindLocalCard();
-            if (localCard == null) return;
+            Debug.LogWarning("❌ LocalPlayer not found!");
+            return;
         }
 
         isReady = !isReady;
-        localCard.SetReadyServerRpc(isReady);
+
+        // Send to server
+        PlayerData.LocalPlayer.SetReadyStateServerRpc(isReady);
+
+        // Change button text locally
+        var txt = button.GetComponentInChildren<TMPro.TMP_Text>();
+        if (txt != null)
+            txt.text = isReady ? "Unready" : "Ready";
     }
 }
