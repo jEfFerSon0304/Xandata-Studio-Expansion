@@ -1,0 +1,17 @@
+using UnityEngine;
+
+[CreateAssetMenu(fileName = "CharacterData", menuName = "Game/Character Data")]
+public class CharacterDataSO : ScriptableObject
+{
+    [Header("Character Info")]
+    public string characterName;
+    public Sprite portrait;
+    public Color themeColor = Color.white;
+
+    [Header("Description")]
+    [TextArea]
+    public string description;
+
+    [Header("Prefab Reference (optional for later gameplay)")]
+    public GameObject characterPrefab;
+}
