@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: CharacterData 1
   m_EditorClassIdentifier: Assembly-CSharp::CharacterDataSO
   characterName: Whale Shark
-  portrait: {fileID: 21300000, guid: 1005ad5570b41294d8bc20355074eeaa, type: 3}
+  portrait: {fileID: 21300000, guid: e30d44dfdc250a84faaf49c2e7a84828, type: 3}
   themeColor: {r: 1, g: 1, b: 1, a: 1}
   description: I am Whale Shark
   characterPrefab: {fileID: 0}

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: CharacterData
   m_EditorClassIdentifier: Assembly-CSharp::CharacterDataSO
   characterName: Kalabaw
-  portrait: {fileID: 21300000, guid: 95db3c73d978ca0459fcfeee28739067, type: 3}
+  portrait: {fileID: 21300000, guid: e2c2c0ffd897b1f4eb9eefa793eaf1dc, type: 3}
   themeColor: {r: 1, g: 1, b: 1, a: 1}
   description: I am Kalabaw
   characterPrefab: {fileID: 0}
