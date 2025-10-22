@@ -21,27 +21,37 @@ public class CharacterSelectionHandler : MonoBehaviour
         prevButton.onClick.AddListener(OnPrev);
         nextButton.onClick.AddListener(OnNext);
 
-        InvokeRepeating(nameof(UpdateUIFromNetwork), 0.3f, 0.3f);
+        InvokeRepeating(nameof(RefreshFromNetwork), 0.3f, 0.3f);
         UpdateUI();
     }
 
     void OnPrev()
     {
         selectedIndex = (selectedIndex - 1 + allCharacters.Length) % allCharacters.Length;
-        SendSelection();
+        SendSelectionToServer();
     }
 
     void OnNext()
     {
         selectedIndex = (selectedIndex + 1) % allCharacters.Length;
-        SendSelection();
+        SendSelectionToServer();
     }
 
-    void SendSelection()
+    void SendSelectionToServer()
     {
         if (PlayerNetwork.LocalPlayer != null)
-        {
             PlayerNetwork.LocalPlayer.SetCharacterIndexServerRpc(selectedIndex);
+    }
+
+    void RefreshFromNetwork()
+    {
+        if (PlayerNetwork.LocalPlayer == null) return;
+
+        int netIndex = PlayerNetwork.LocalPlayer.SelectedCharacterIndex.Value;
+        if (netIndex != selectedIndex && netIndex >= 0 && netIndex < allCharacters.Length)
+        {
+            selectedIndex = netIndex;
+            UpdateUI();
         }
     }
 
@@ -50,13 +60,5 @@ public class CharacterSelectionHandler : MonoBehaviour
         var data = allCharacters[selectedIndex];
         characterNameText.text = data.characterName;
         characterPortrait.sprite = data.portrait;
-    }
-
-    void UpdateUIFromNetwork()
-    {
-        if (PlayerNetwork.LocalPlayer == null) return;
-        selectedIndex = PlayerNetwork.LocalPlayer.SelectedCharacterIndex.Value;
-        if (selectedIndex >= 0 && selectedIndex < allCharacters.Length)
-            UpdateUI();
     }
 }

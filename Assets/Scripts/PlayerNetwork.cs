@@ -5,8 +5,11 @@ public class PlayerNetwork : NetworkBehaviour
 {
     public static PlayerNetwork LocalPlayer;
 
-    public NetworkVariable<int> SelectedCharacterIndex = new(-1, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-    public NetworkVariable<bool> IsReady = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    // Network-synchronized variables
+    public NetworkVariable<int> SelectedCharacterIndex =
+        new(-1, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> IsReady =
+        new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     void Awake()
     {
@@ -20,9 +23,10 @@ public class PlayerNetwork : NetworkBehaviour
     }
 
     [ServerRpc]
-    public void SetCharacterIndexServerRpc(int newIndex)
+    public void SetCharacterIndexServerRpc(int index)
     {
-        SelectedCharacterIndex.Value = newIndex;
+        SelectedCharacterIndex.Value = index;
+        Debug.Log($"[Server] Player {OwnerClientId} selected character index {index}");
     }
 
     [ServerRpc]
