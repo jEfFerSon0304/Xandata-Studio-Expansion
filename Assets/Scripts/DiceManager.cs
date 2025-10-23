@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Unity.Netcode;
 using UnityEngine;
+using Unity.Netcode;
 using UnityEngine.UI;
 using TMPro;
 
@@ -16,53 +16,75 @@ public class DiceManager : NetworkBehaviour
     public Transform spawnPoint;
 
     private DiceRoller myDice;
-    private NetworkVariable<bool> allRolled = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-
-    private static Dictionary<ulong, int> playerRollResults = new();
+    private static readonly Dictionary<ulong, int> playerRollResults = new();
 
     void Start()
     {
         rollButton.onClick.AddListener(OnRollClicked);
-        infoText.text = "🎲 Waiting for all players...";
+        infoText.text = "🎲 Waiting for players...";
     }
 
     public override void OnNetworkSpawn()
     {
-        if (IsOwner)
+        if (IsServer)
         {
-            // Spawn each player's dice on their screen
-            SpawnMyDiceServerRpc(OwnerClientId);
+            playerRollResults.Clear();
+
+            // Spawn one dice for each connected client
+            foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
+            {
+                SpawnDiceForClient(clientId);
+            }
+        }
+    }
+
+    private void SpawnDiceForClient(ulong clientId)
+    {
+        if (dicePrefab == null || spawnPoint == null)
+        {
+            Debug.LogError("❌ DiceManager: Missing prefab or spawnPoint reference!");
+            return;
         }
 
-        if (IsServer)
-            playerRollResults.Clear();
-    }
+        // Prevent duplicate spawn
+        var existing = FindObjectsByType<DiceRoller>(FindObjectsSortMode.None);
+        if (existing.Any(d => d.OwnerClientId == clientId))
+            return;
 
-    [ServerRpc(RequireOwnership = false)]
-    void SpawnMyDiceServerRpc(ulong clientId, ServerRpcParams rpcParams = default)
-    {
-        GameObject dice = Instantiate(dicePrefab, spawnPoint.position + Vector3.right * clientId * 1.5f, Quaternion.identity);
-        var netObj = dice.GetComponent<NetworkObject>();
+        Vector3 spawnPos = spawnPoint.position + Vector3.right * (clientId * 2f);
+        GameObject dice = Instantiate(dicePrefab, spawnPos, Quaternion.identity);
+
+        if (!dice.TryGetComponent(out NetworkObject netObj))
+        {
+            Debug.LogError("❌ Dice prefab missing NetworkObject component!");
+            return;
+        }
+
         netObj.SpawnWithOwnership(clientId);
+        Debug.Log($"✅ Spawned dice for Player {clientId}");
     }
 
-    void OnRollClicked()
+    private void OnRollClicked()
     {
         if (myDice == null)
             myDice = FindMyDice();
 
         if (myDice != null)
         {
-            myDice.RollDice();
+            myDice.RequestRoll(); // Let the server roll it
             rollButton.interactable = false;
             infoText.text = "🎲 Rolling...";
             Invoke(nameof(SendResultToServer), 3f);
         }
+        else
+        {
+            Debug.LogWarning("⚠️ No dice found for this player!");
+        }
     }
 
-    DiceRoller FindMyDice()
+    private DiceRoller FindMyDice()
     {
-        var all = FindObjectsOfType<DiceRoller>();
+        var all = FindObjectsByType<DiceRoller>(FindObjectsSortMode.None);
         foreach (var d in all)
         {
             if (d.OwnerClientId == NetworkManager.Singleton.LocalClientId)
@@ -71,16 +93,17 @@ public class DiceManager : NetworkBehaviour
         return null;
     }
 
-    void SendResultToServer()
+    private void SendResultToServer()
     {
         int result = myDice != null ? myDice.GetValue() : Random.Range(1, 7);
         SendDiceResultServerRpc(result);
     }
 
     [ServerRpc(RequireOwnership = false)]
-    void SendDiceResultServerRpc(int value, ServerRpcParams rpc = default)
+    private void SendDiceResultServerRpc(int value, ServerRpcParams rpc = default)
     {
         ulong sender = rpc.Receive.SenderClientId;
+
         if (!playerRollResults.ContainsKey(sender))
             playerRollResults.Add(sender, value);
 
@@ -92,26 +115,27 @@ public class DiceManager : NetworkBehaviour
         }
     }
 
-    void HandleTurnOrder()
+    private void HandleTurnOrder()
     {
-        // Ensure unique results
-        var values = playerRollResults.Values.ToList();
-        for (int i = 0; i < values.Count; i++)
+        // Ensure unique dice results
+        var usedValues = new HashSet<int>();
+        foreach (var key in playerRollResults.Keys.ToList())
         {
-            for (int j = i + 1; j < values.Count; j++)
-            {
-                if (values[i] == values[j])
-                    values[j] = Random.Range(1, 7); // re-roll duplicate
-            }
+            int value = playerRollResults[key];
+            while (usedValues.Contains(value))
+                value = Random.Range(1, 7);
+            usedValues.Add(value);
+            playerRollResults[key] = value;
         }
 
-        playerRollResults = playerRollResults
+        // Sort by highest roll
+        var orderedResults = playerRollResults
             .OrderByDescending(kv => kv.Value)
             .ToDictionary(kv => kv.Key, kv => kv.Value);
 
-        string orderText = "Turn Order:\n";
+        string orderText = "🎯 Turn Order:\n";
         int rank = 1;
-        foreach (var kv in playerRollResults)
+        foreach (var kv in orderedResults)
         {
             orderText += $"{rank++}. Player {kv.Key} 🎲 {kv.Value}\n";
         }
@@ -119,17 +143,16 @@ public class DiceManager : NetworkBehaviour
         Debug.Log(orderText);
         UpdateTurnOrderClientRpc(orderText);
 
-        // Wait then load main scene
         Invoke(nameof(LoadMainGameScene), 4f);
     }
 
     [ClientRpc]
-    void UpdateTurnOrderClientRpc(string order)
+    private void UpdateTurnOrderClientRpc(string order)
     {
         infoText.text = order;
     }
 
-    void LoadMainGameScene()
+    private void LoadMainGameScene()
     {
         if (IsServer)
             NetworkManager.Singleton.SceneManager.LoadScene("MainGame", UnityEngine.SceneManagement.LoadSceneMode.Single);
