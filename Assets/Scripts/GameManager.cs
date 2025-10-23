@@ -11,7 +11,7 @@ public class GameManager : NetworkBehaviour
     {
         if (!IsServer) return;
 
-        var players = FindObjectsOfType<PlayerNetwork>();
+        var players = FindObjectsByType<PlayerNetwork>(FindObjectsSortMode.None);
         for (int i = 0; i < players.Length; i++)
         {
             int charIndex = Mathf.Clamp(players[i].SelectedCharacterIndex.Value, 0, 3);

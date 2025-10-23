@@ -6,10 +6,8 @@ using System.Linq;
 
 public class ReadyButton : MonoBehaviour
 {
-    [Header("UI References")]
-    public TMP_Text buttonText;
-
-    private Button button;
+    public TMP_Text label;
+    Button button;
 
     void Awake()
     {
@@ -17,79 +15,69 @@ public class ReadyButton : MonoBehaviour
         button.onClick.AddListener(OnClick);
     }
 
-    void OnEnable()
-    {
-        PlayerNetwork.OnAnyReadyStateChanged += UpdateLabel;
-    }
-
-    void OnDisable()
-    {
-        PlayerNetwork.OnAnyReadyStateChanged -= UpdateLabel;
-    }
-
     void Start()
     {
-        if (buttonText == null)
-            buttonText = GetComponentInChildren<TMP_Text>();
-
-        Invoke(nameof(UpdateLabel), 0.3f);
+        if (label == null) label = GetComponentInChildren<TMP_Text>();
+        PlayerNetwork.OnAnyStateChanged += UpdateLabel;
+        InvokeRepeating(nameof(UpdateLabel), 0.3f, 0.3f);
     }
+
+    void OnDestroy() => PlayerNetwork.OnAnyStateChanged -= UpdateLabel;
 
     void OnClick()
     {
         if (NetworkManager.Singleton == null) return;
 
-        if (NetworkManager.Singleton.IsHost)
+        if (NetworkManager.Singleton.IsHost && AllPlayersReady())
         {
-            if (AllPlayersReady())
-                LobbyManager.Instance.TryStartGame();
-        }
-        else
-        {
-            if (PlayerNetwork.LocalPlayer == null) return;
-
-            bool current = PlayerNetwork.LocalPlayer.IsReady.Value;
-            PlayerNetwork.LocalPlayer.SetReadyServerRpc(!current);
+            Debug.Log("[Host] Everyone ready — starting game...");
+            LobbyManager.Instance.TryStartGame();
+            return;
         }
 
-        UpdateLabel();
+        if (PlayerNetwork.LocalPlayer != null)
+        {
+            bool ready = PlayerNetwork.LocalPlayer.IsReady.Value;
+            PlayerNetwork.LocalPlayer.SetReadyServerRpc(!ready);
+        }
     }
 
     void UpdateLabel()
     {
-        if (buttonText == null || NetworkManager.Singleton == null) return;
+        if (label == null || NetworkManager.Singleton == null) return;
+
+        bool allReady = AllPlayersReady();
 
         if (NetworkManager.Singleton.IsHost)
         {
-            if (AllPlayersReady())
+            // Host acts like everyone else until all ready
+            if (allReady)
             {
-                buttonText.text = "Start Game";
+                label.text = "Start Game";
+                label.color = Color.green;
             }
             else
             {
-                buttonText.text = "Waiting...";
+                label.text = PlayerNetwork.LocalPlayer?.IsReady.Value == true ? "Locked" : "Ready";
+                label.color = PlayerNetwork.LocalPlayer?.IsReady.Value == true ? Color.gray : Color.cyan;
             }
         }
         else
         {
             if (PlayerNetwork.LocalPlayer == null) return;
-
-            if (PlayerNetwork.LocalPlayer.IsReady.Value)
-            {
-                buttonText.text = "Locked 🔒";
-            }
-            else
-            {
-                buttonText.text = "Ready";
-            }
+            label.text = PlayerNetwork.LocalPlayer.IsReady.Value ? "Locked" : "Ready";
+            label.color = PlayerNetwork.LocalPlayer.IsReady.Value ? Color.gray : Color.cyan;
         }
-
-        Debug.Log($"[Host] All ready? {AllPlayersReady()}");
     }
 
     bool AllPlayersReady()
     {
+#if UNITY_2023_1_OR_NEWER
+        var players = FindObjectsByType<PlayerNetwork>(FindObjectsSortMode.None);
+#else
         var players = FindObjectsOfType<PlayerNetwork>();
-        return players.Length > 0 && players.All(p => p.IsReady.Value);
+#endif
+        if (players.Length == 0) return false;
+        return players.All(p => p.IsReady.Value);
     }
 }

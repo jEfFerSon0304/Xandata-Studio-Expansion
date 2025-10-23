@@ -4,38 +4,23 @@ using TMPro;
 
 public class PlayerCardUI : MonoBehaviour
 {
-    [Header("UI References")]
-    public TMP_Text playerLabel;      // ← add this
     public Image portrait;
-    public TMP_Text characterNameText;
-    public Image readyIndicator;
-    public Button prevButton;
-    public Button nextButton;
+    public TMP_Text nameText;
+    public Button prev, next;
+    public GameObject readyOverlay;
 
-    [HideInInspector] public ulong ownerClientId;
-    [HideInInspector] public bool isLocal;
+    [HideInInspector] public ulong ownerId;
 
-    public void SetPlayerLabel(string label)
+    public void SetData(Sprite pic, string name, bool ready)
     {
-        if (playerLabel != null)
-            playerLabel.text = label;
+        if (portrait) portrait.sprite = pic;
+        if (nameText) nameText.text = name;
+        if (readyOverlay) readyOverlay.SetActive(ready);
     }
 
-    public void SetCharacter(Sprite sprite, string name)
+    public void ShowControls(bool show)
     {
-        if (portrait != null) portrait.sprite = sprite;
-        if (characterNameText != null) characterNameText.text = name;
-    }
-
-    public void SetReadyVisual(bool ready)
-    {
-        if (readyIndicator != null)
-            readyIndicator.enabled = ready;
-    }
-
-    public void ShowNavigationButtons(bool show)
-    {
-        if (prevButton != null) prevButton.gameObject.SetActive(show);
-        if (nextButton != null) nextButton.gameObject.SetActive(show);
+        if (prev) prev.gameObject.SetActive(show);
+        if (next) next.gameObject.SetActive(show);
     }
 }

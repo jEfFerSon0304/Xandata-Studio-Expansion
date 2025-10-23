@@ -1,110 +1,40 @@
 using UnityEngine;
 using Unity.Netcode;
 using UnityEngine.SceneManagement;
-using System.Collections.Generic;
+using System.Linq;
 
-public class LobbyManager : NetworkBehaviour
+public class LobbyManager : MonoBehaviour
 {
-    public static LobbyManager Instance;
+    public static LobbyManager Instance { get; private set; }
 
-    // Optional: lobby code if you want to display one later
-    [SerializeField] private string lobbyCode;
-
-    // Cache of connected players
-    private readonly List<PlayerNetwork> connectedPlayers = new();
-
-    private void Awake()
+    void Awake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
+        if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
             return;
         }
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
     }
 
-    public override void OnNetworkSpawn()
-    {
-        if (IsServer)
-        {
-            NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
-            NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
-        }
-    }
-
-    private void OnDestroy()
-    {
-        if (NetworkManager.Singleton != null)
-        {
-            NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnected;
-            NetworkManager.Singleton.OnClientDisconnectCallback -= OnClientDisconnected;
-        }
-    }
-
-    private void OnClientConnected(ulong clientId)
-    {
-        Debug.Log($"Client connected: {clientId}");
-        RefreshConnectedPlayers();
-    }
-
-    private void OnClientDisconnected(ulong clientId)
-    {
-        Debug.Log($"Client disconnected: {clientId}");
-        RefreshConnectedPlayers();
-    }
-
-    private void RefreshConnectedPlayers()
-    {
-        connectedPlayers.Clear();
-        foreach (var player in FindObjectsOfType<PlayerNetwork>())
-        {
-            connectedPlayers.Add(player);
-        }
-    }
-
-    // Called by the host's ReadyButton
     public void TryStartGame()
     {
-        if (!IsServer) return;
+        if (!NetworkManager.Singleton.IsServer) return;
 
-        if (!AllPlayersReady())
+#if UNITY_2023_1_OR_NEWER
+        var players = FindObjectsByType<PlayerNetwork>(FindObjectsSortMode.None);
+#else
+        var players = FindObjectsOfType<PlayerNetwork>();
+#endif
+        if (players.Length == 0) return;
+        if (!players.All(p => p.IsReady.Value))
         {
-            Debug.LogWarning("Not all players are ready yet!");
+            Debug.Log("[LobbyManager] Not all players are ready yet.");
             return;
         }
 
-        Debug.Log("All players ready — starting game...");
-        NetworkManager.Singleton.SceneManager.LoadScene("Game", LoadSceneMode.Single);
-    }
-
-    private bool AllPlayersReady()
-    {
-        foreach (var player in FindObjectsOfType<PlayerNetwork>())
-        {
-            if (!player.IsReady.Value)
-                return false;
-        }
-        return true;
-    }
-
-    // Optional: Helper to get player data by clientId
-    public PlayerNetwork GetPlayer(ulong clientId)
-    {
-        foreach (var player in connectedPlayers)
-        {
-            if (player.OwnerClientId == clientId)
-                return player;
-        }
-        return null;
-    }
-
-    // Optional: For UI display later
-    public List<PlayerNetwork> GetAllPlayers()
-    {
-        return new List<PlayerNetwork>(connectedPlayers);
+        Debug.Log("[LobbyManager] All players ready. Loading MainGame scene...");
+        NetworkManager.Singleton.SceneManager.LoadScene("MainGame", LoadSceneMode.Single);
     }
 }

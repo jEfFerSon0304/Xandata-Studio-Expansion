@@ -282,8 +282,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LobbyUIController
   ShowTopMostFoldoutHeaderGroup: 1
-  cardContainer: {fileID: 835165365}
-  characterSelectionCardPrefab: {fileID: 8352781812301287858, guid: 706608aaac0490d4198cc8d674c77c85, type: 3}
+  container: {fileID: 835165365}
+  cardPrefab: {fileID: 8352781812301287858, guid: 706608aaac0490d4198cc8d674c77c85, type: 3}
   allCharacters:
   - {fileID: 11400000, guid: 8bb59034582024a439b21c20ba595669, type: 2}
   - {fileID: 11400000, guid: 576c4f669e5d50f4dae59543270a33a6, type: 2}
@@ -1037,7 +1037,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9fd802c7b8bae854ba164fb437fd84a2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ReadyButton
-  buttonText: {fileID: 687776450}
+  label: {fileID: 687776450}
 --- !u!1 &1310652790
 GameObject:
   m_ObjectHideFlags: 0
@@ -1441,8 +1441,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cd1762184bf0fd144b6f14f4076e7520, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LobbyManager
-  ShowTopMostFoldoutHeaderGroup: 1
-  lobbyCode: 
 --- !u!4 &1911459053
 Transform:
   m_ObjectHideFlags: 0
