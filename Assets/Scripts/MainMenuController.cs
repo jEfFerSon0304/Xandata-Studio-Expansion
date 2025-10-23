@@ -1,54 +1,71 @@
-using UnityEngine;
+﻿using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
 using Unity.Netcode;
 using UnityEngine.SceneManagement;
-using TMPro;
-using UnityEngine.UI;
 
-public class MainMenuController : MonoBehaviour
+public class MenuController : MonoBehaviour
 {
-    [Header("UI References")]
-    public TMP_InputField joinCodeInput;
-    public TMP_Text statusText;
+    [Header("Panels")]
+    public GameObject startGamePanel;
     public GameObject joinPanel;
-    public Button hostButton;
-    public Button joinButton;
-    public Button quitButton;
 
-    void Start()
+    [Header("Join Settings")]
+    public TMP_InputField joinCodeInput;
+    public TMP_Text warningText;
+
+    private void Start()
     {
+        // Ensure correct state at start
+        startGamePanel.SetActive(true);
         joinPanel.SetActive(false);
-        hostButton.onClick.AddListener(StartHost);
-        joinButton.onClick.AddListener(OpenJoinPanel);
-        quitButton.onClick.AddListener(() => Application.Quit());
     }
 
-    void OpenJoinPanel()
+    public void OnHostClicked()
     {
+        NetworkManager.Singleton.StartHost();
+        SceneManager.LoadScene("Lobby");
+    }
+
+    public void OnJoinClicked()
+    {
+        // Hide start panel and show join panel
+        startGamePanel.SetActive(false);
         joinPanel.SetActive(true);
     }
 
-    public void StartHost()
+    public void OnJoinConfirmClicked()
     {
-        if (NetworkManager.Singleton.StartHost())
+        if (string.IsNullOrEmpty(joinCodeInput.text))
         {
-            statusText.text = "Hosting...";
-            NetworkManager.Singleton.SceneManager.LoadScene("Lobby", LoadSceneMode.Single);
+            warningText.text = "⚠ Please enter a join code!";
+            return;
+        }
+
+        // Example: could use IP or code system here
+        bool success = NetworkManager.Singleton.StartClient();
+
+        if (!success)
+        {
+            warningText.text = "⚠ Invalid Lobby Code!";
         }
         else
         {
-            statusText.text = "Failed to start host.";
+            SceneManager.LoadScene("Lobby");
         }
     }
 
-    public void JoinLobby()
+    public void OnBackClicked()
     {
-        if (NetworkManager.Singleton.StartClient())
-        {
-            statusText.text = "Joining lobby...";
-        }
-        else
-        {
-            statusText.text = "Failed to join.";
-        }
+        // Go back to main panel
+        joinPanel.SetActive(false);
+        startGamePanel.SetActive(true);
+        warningText.text = "";
+        joinCodeInput.text = "";
+    }
+
+    public void OnQuitClicked()
+    {
+        Application.Quit();
     }
 }

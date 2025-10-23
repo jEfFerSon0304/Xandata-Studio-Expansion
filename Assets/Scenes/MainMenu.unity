@@ -273,7 +273,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &233721563
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -631,7 +631,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 349459711}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 2011548985}
+        m_TargetAssemblyTypeName: MenuController, Assembly-CSharp
+        m_MethodName: OnQuitClicked
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &349459711
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1266,7 +1278,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1057935815}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 2011548985}
+        m_TargetAssemblyTypeName: MenuController, Assembly-CSharp
+        m_MethodName: OnBackClicked
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1057935815
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1523,7 +1547,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1267235703}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 2011548985}
+        m_TargetAssemblyTypeName: MenuController, Assembly-CSharp
+        m_MethodName: OnJoinClicked
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1267235703
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1994,7 +2030,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1568664781}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 2011548985}
+        m_TargetAssemblyTypeName: MenuController, Assembly-CSharp
+        m_MethodName: OnHostClicked
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1568664781
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2115,7 +2163,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1678544037}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 2011548985}
+        m_TargetAssemblyTypeName: MenuController, Assembly-CSharp
+        m_MethodName: OnJoinConfirmClicked
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1678544037
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2679,12 +2739,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7752a870d9a8e104db0e0f2e3268c785, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MainMenuController
-  joinCodeInput: {fileID: 1027289941}
-  statusText: {fileID: 233721563}
+  startGamePanel: {fileID: 661696071}
   joinPanel: {fileID: 1396507619}
-  hostButton: {fileID: 1568664780}
-  joinButton: {fileID: 1267235702}
-  quitButton: {fileID: 349459710}
+  joinCodeInput: {fileID: 1027289941}
+  warningText: {fileID: 0}
 --- !u!1001 &1570834845416146670
 PrefabInstance:
   m_ObjectHideFlags: 0

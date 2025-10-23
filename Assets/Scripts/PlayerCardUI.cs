@@ -5,6 +5,7 @@ using TMPro;
 public class PlayerCardUI : MonoBehaviour
 {
     [Header("UI References")]
+    public TMP_Text playerLabel;      // ← add this
     public Image portrait;
     public TMP_Text characterNameText;
     public Image readyIndicator;
@@ -14,21 +15,27 @@ public class PlayerCardUI : MonoBehaviour
     [HideInInspector] public ulong ownerClientId;
     [HideInInspector] public bool isLocal;
 
+    public void SetPlayerLabel(string label)
+    {
+        if (playerLabel != null)
+            playerLabel.text = label;
+    }
+
     public void SetCharacter(Sprite sprite, string name)
     {
-        portrait.sprite = sprite;
-        characterNameText.text = name;
+        if (portrait != null) portrait.sprite = sprite;
+        if (characterNameText != null) characterNameText.text = name;
     }
 
     public void SetReadyVisual(bool ready)
     {
         if (readyIndicator != null)
-            readyIndicator.enabled = ready; // Turn on/off image
+            readyIndicator.enabled = ready;
     }
 
-    public void EnableButtons(bool enable)
+    public void ShowNavigationButtons(bool show)
     {
-        if (prevButton != null) prevButton.interactable = enable;
-        if (nextButton != null) nextButton.interactable = enable;
+        if (prevButton != null) prevButton.gameObject.SetActive(show);
+        if (nextButton != null) nextButton.gameObject.SetActive(show);
     }
 }

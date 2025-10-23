@@ -1,29 +1,40 @@
 ﻿using UnityEngine;
 using Unity.Netcode;
 using System.Collections.Generic;
-using UnityEngine.UI;
+using System.Linq;
 
 public class LobbyUIController : NetworkBehaviour
 {
     [Header("UI References")]
-    public Transform cardContainer;                // Horizontal layout parent
+    public Transform cardContainer;
     public GameObject characterSelectionCardPrefab;
 
-    [Header("Data")]
+    [Header("Character Data")]
     public CharacterDataSO[] allCharacters;
 
     private Dictionary<ulong, PlayerCardUI> playerCards = new();
 
     void Start()
     {
+        PlayerNetwork.OnAnyReadyStateChanged += RefreshLobbyInstant;
         InvokeRepeating(nameof(RefreshLobby), 0.3f, 0.3f);
+    }
+
+    void OnDestroy()
+    {
+        PlayerNetwork.OnAnyReadyStateChanged -= RefreshLobbyInstant;
+    }
+
+    void RefreshLobbyInstant()
+    {
+        RefreshLobby();
     }
 
     void RefreshLobby()
     {
-        var players = FindObjectsOfType<PlayerNetwork>();
+        var players = FindObjectsOfType<PlayerNetwork>().OrderBy(p => p.SlotIndex.Value).ToList();
 
-        // Ensure one card per connected player
+        // Create cards for new players
         foreach (var player in players)
         {
             if (!playerCards.ContainsKey(player.OwnerClientId))
@@ -33,9 +44,15 @@ public class LobbyUIController : NetworkBehaviour
 
                 cardUI.ownerClientId = player.OwnerClientId;
                 cardUI.isLocal = player.IsOwner;
-                cardUI.EnableButtons(player.IsOwner);
 
-                // Connect buttons to local player's actions only
+                // Assign player label using SlotIndex (P1–P4)
+                string label = $"P{player.SlotIndex.Value + 1}";
+                cardUI.SetPlayerLabel(label);
+
+                // Hide navigation buttons for others
+                cardUI.ShowNavigationButtons(player.IsOwner);
+
+                // Add button listeners only for local player
                 if (player.IsOwner)
                 {
                     cardUI.prevButton.onClick.AddListener(() => OnPrevClicked());
@@ -48,23 +65,24 @@ public class LobbyUIController : NetworkBehaviour
             UpdateCard(player);
         }
 
-        // Remove cards for disconnected players
-        CleanUpDisconnected(players);
+        // Remove disconnected players
+        CleanDisconnected(players);
     }
 
     void UpdateCard(PlayerNetwork player)
     {
         if (!playerCards.ContainsKey(player.OwnerClientId)) return;
-
         var card = playerCards[player.OwnerClientId];
+
         int charIndex = player.SelectedCharacterIndex.Value;
         bool ready = player.IsReady.Value;
 
-        // Get character data safely
+        // Load character data
         CharacterDataSO data = null;
         if (charIndex >= 0 && charIndex < allCharacters.Length)
             data = allCharacters[charIndex];
 
+        // Apply visuals
         if (data != null)
             card.SetCharacter(data.portrait, data.characterName);
         else
@@ -77,7 +95,7 @@ public class LobbyUIController : NetworkBehaviour
     {
         if (PlayerNetwork.LocalPlayer == null) return;
 
-        var currentIndex = PlayerNetwork.LocalPlayer.SelectedCharacterIndex.Value;
+        int currentIndex = PlayerNetwork.LocalPlayer.SelectedCharacterIndex.Value;
         int newIndex = (currentIndex - 1 + allCharacters.Length) % allCharacters.Length;
         PlayerNetwork.LocalPlayer.SetCharacterIndexServerRpc(newIndex);
     }
@@ -86,22 +104,17 @@ public class LobbyUIController : NetworkBehaviour
     {
         if (PlayerNetwork.LocalPlayer == null) return;
 
-        var currentIndex = PlayerNetwork.LocalPlayer.SelectedCharacterIndex.Value;
+        int currentIndex = PlayerNetwork.LocalPlayer.SelectedCharacterIndex.Value;
         int newIndex = (currentIndex + 1) % allCharacters.Length;
         PlayerNetwork.LocalPlayer.SetCharacterIndexServerRpc(newIndex);
     }
 
-    void CleanUpDisconnected(PlayerNetwork[] players)
+    void CleanDisconnected(List<PlayerNetwork> currentPlayers)
     {
-        var ids = new List<ulong>(playerCards.Keys);
+        var ids = playerCards.Keys.ToList();
         foreach (var id in ids)
         {
-            bool stillConnected = false;
-            foreach (var p in players)
-            {
-                if (p.OwnerClientId == id) { stillConnected = true; break; }
-            }
-            if (!stillConnected)
+            if (!currentPlayers.Any(p => p.OwnerClientId == id))
             {
                 Destroy(playerCards[id].gameObject);
                 playerCards.Remove(id);

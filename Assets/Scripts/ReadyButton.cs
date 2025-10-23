@@ -2,6 +2,7 @@
 using UnityEngine.UI;
 using TMPro;
 using Unity.Netcode;
+using System.Linq;
 
 public class ReadyButton : MonoBehaviour
 {
@@ -13,28 +14,42 @@ public class ReadyButton : MonoBehaviour
     void Awake()
     {
         button = GetComponent<Button>();
-        if (button == null)
-        {
-            Debug.LogError("❌ ReadyButton: No Button component found on this object!");
-            return;
-        }
-
         button.onClick.AddListener(OnClick);
+    }
+
+    void OnEnable()
+    {
+        PlayerNetwork.OnAnyReadyStateChanged += UpdateLabel;
+    }
+
+    void OnDisable()
+    {
+        PlayerNetwork.OnAnyReadyStateChanged -= UpdateLabel;
     }
 
     void Start()
     {
-        // Prevent null crash if buttonText is missing or NetworkManager not yet initialized
         if (buttonText == null)
-        {
-            Debug.LogWarning("⚠ ReadyButton: ButtonText not assigned in Inspector!");
-            return;
-        }
+            buttonText = GetComponentInChildren<TMP_Text>();
 
-        if (NetworkManager.Singleton == null)
+        Invoke(nameof(UpdateLabel), 0.3f);
+    }
+
+    void OnClick()
+    {
+        if (NetworkManager.Singleton == null) return;
+
+        if (NetworkManager.Singleton.IsHost)
         {
-            Debug.LogWarning("⚠ NetworkManager not found when ReadyButton started.");
-            return;
+            if (AllPlayersReady())
+                LobbyManager.Instance.TryStartGame();
+        }
+        else
+        {
+            if (PlayerNetwork.LocalPlayer == null) return;
+
+            bool current = PlayerNetwork.LocalPlayer.IsReady.Value;
+            PlayerNetwork.LocalPlayer.SetReadyServerRpc(!current);
         }
 
         UpdateLabel();
@@ -45,26 +60,36 @@ public class ReadyButton : MonoBehaviour
         if (buttonText == null || NetworkManager.Singleton == null) return;
 
         if (NetworkManager.Singleton.IsHost)
-            buttonText.text = "Start Game";
-        else
-            buttonText.text = "Ready";
-    }
-
-    void OnClick()
-    {
-        if (NetworkManager.Singleton == null) return;
-
-        if (NetworkManager.Singleton.IsHost)
         {
-            LobbyManager.Instance.TryStartGame();
-        }
-        else
-        {
-            if (PlayerNetwork.LocalPlayer != null)
+            if (AllPlayersReady())
             {
-                bool current = PlayerNetwork.LocalPlayer.IsReady.Value;
-                PlayerNetwork.LocalPlayer.SetReadyServerRpc(!current);
+                buttonText.text = "Start Game";
+            }
+            else
+            {
+                buttonText.text = "Waiting...";
             }
         }
+        else
+        {
+            if (PlayerNetwork.LocalPlayer == null) return;
+
+            if (PlayerNetwork.LocalPlayer.IsReady.Value)
+            {
+                buttonText.text = "Locked 🔒";
+            }
+            else
+            {
+                buttonText.text = "Ready";
+            }
+        }
+
+        Debug.Log($"[Host] All ready? {AllPlayersReady()}");
+    }
+
+    bool AllPlayersReady()
+    {
+        var players = FindObjectsOfType<PlayerNetwork>();
+        return players.Length > 0 && players.All(p => p.IsReady.Value);
     }
 }

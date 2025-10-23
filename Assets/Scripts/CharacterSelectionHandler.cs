@@ -1,7 +1,8 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Unity.Netcode;
+using System.Linq;
 
 public class CharacterSelectionHandler : MonoBehaviour
 {
@@ -11,7 +12,7 @@ public class CharacterSelectionHandler : MonoBehaviour
     public Button prevButton;
     public Button nextButton;
 
-    [Header("Data")]
+    [Header("Character Data")]
     public CharacterDataSO[] allCharacters;
 
     private int selectedIndex = 0;
@@ -21,44 +22,64 @@ public class CharacterSelectionHandler : MonoBehaviour
         prevButton.onClick.AddListener(OnPrev);
         nextButton.onClick.AddListener(OnNext);
 
-        InvokeRepeating(nameof(RefreshFromNetwork), 0.3f, 0.3f);
-        UpdateUI();
+        PlayerNetwork.OnAnyReadyStateChanged += RefreshUI;
+        InvokeRepeating(nameof(RefreshUI), 0.3f, 0.3f);
+
+        RefreshUI();
+    }
+
+    void OnDestroy()
+    {
+        PlayerNetwork.OnAnyReadyStateChanged -= RefreshUI;
     }
 
     void OnPrev()
     {
-        selectedIndex = (selectedIndex - 1 + allCharacters.Length) % allCharacters.Length;
-        SendSelectionToServer();
+        if (PlayerNetwork.LocalPlayer == null || PlayerNetwork.LocalPlayer.IsReady.Value)
+            return; // can't change when locked
+
+        int newIndex = (selectedIndex - 1 + allCharacters.Length) % allCharacters.Length;
+        TryChangeCharacter(newIndex);
     }
 
     void OnNext()
     {
-        selectedIndex = (selectedIndex + 1) % allCharacters.Length;
-        SendSelectionToServer();
+        if (PlayerNetwork.LocalPlayer == null || PlayerNetwork.LocalPlayer.IsReady.Value)
+            return;
+
+        int newIndex = (selectedIndex + 1) % allCharacters.Length;
+        TryChangeCharacter(newIndex);
     }
 
-    void SendSelectionToServer()
+    void TryChangeCharacter(int newIndex)
     {
-        if (PlayerNetwork.LocalPlayer != null)
-            PlayerNetwork.LocalPlayer.SetCharacterIndexServerRpc(selectedIndex);
+        // Don’t allow selecting locked characters
+        var players = FindObjectsOfType<PlayerNetwork>();
+        bool locked = players.Any(p => p.IsReady.Value && p.SelectedCharacterIndex.Value == newIndex);
+        if (locked)
+        {
+            Debug.Log($"⚠ Character index {newIndex} is already locked by another player.");
+            return;
+        }
+
+        PlayerNetwork.LocalPlayer.SetCharacterIndexServerRpc(newIndex);
     }
 
-    void RefreshFromNetwork()
+    void RefreshUI()
     {
         if (PlayerNetwork.LocalPlayer == null) return;
 
-        int netIndex = PlayerNetwork.LocalPlayer.SelectedCharacterIndex.Value;
-        if (netIndex != selectedIndex && netIndex >= 0 && netIndex < allCharacters.Length)
-        {
-            selectedIndex = netIndex;
-            UpdateUI();
-        }
-    }
+        selectedIndex = PlayerNetwork.LocalPlayer.SelectedCharacterIndex.Value;
 
-    void UpdateUI()
-    {
+        if (selectedIndex < 0 || selectedIndex >= allCharacters.Length)
+            selectedIndex = 0;
+
         var data = allCharacters[selectedIndex];
         characterNameText.text = data.characterName;
         characterPortrait.sprite = data.portrait;
+
+        bool locked = PlayerNetwork.LocalPlayer.IsReady.Value;
+        prevButton.interactable = !locked;
+        nextButton.interactable = !locked;
     }
 }
