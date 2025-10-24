@@ -42,8 +42,8 @@ public class DiceRoller : NetworkBehaviour
 
         if (Vector3.Dot(up, Vector3.up) > 0.9f) return 1;
         if (Vector3.Dot(-transform.up, Vector3.up) > 0.9f) return 6;
-        if (Vector3.Dot(transform.forward, Vector3.up) > 0.9f) return 5;
-        if (Vector3.Dot(-transform.forward, Vector3.up) > 0.9f) return 2;
+        if (Vector3.Dot(transform.forward, Vector3.up) > 0.9f) return 2;
+        if (Vector3.Dot(-transform.forward, Vector3.up) > 0.9f) return 5;
         if (Vector3.Dot(transform.right, Vector3.up) > 0.9f) return 3;
         return 4;
     }
