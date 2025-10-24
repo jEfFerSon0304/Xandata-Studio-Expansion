@@ -1,160 +1,172 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using UnityEngine;
+﻿using UnityEngine;
 using Unity.Netcode;
 using UnityEngine.UI;
 using TMPro;
+using System.Collections.Generic;
+using System.Linq;
 
 public class DiceManager : NetworkBehaviour
 {
-    [Header("UI References")]
+    [Header("UI")]
     public Button rollButton;
     public TMP_Text infoText;
 
-    [Header("Dice Setup")]
+    [Header("Dice Settings")]
     public GameObject dicePrefab;
     public Transform spawnPoint;
 
     private DiceRoller myDice;
-    private static readonly Dictionary<ulong, int> playerRollResults = new();
+    private static Dictionary<ulong, int> playerRolls = new();
 
-    void Start()
-    {
-        rollButton.onClick.AddListener(OnRollClicked);
-        infoText.text = "🎲 Waiting for players...";
-    }
 
     public override void OnNetworkSpawn()
     {
+        Debug.Log($"[DiceManager] OnNetworkSpawn() called on {(IsServer ? "Server" : "Client")}");
+
         if (IsServer)
         {
-            playerRollResults.Clear();
+            playerRolls.Clear();
+            int index = 0;
 
-            // Spawn one dice for each connected client
             foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
             {
-                SpawnDiceForClient(clientId);
+                Vector3 offset = new Vector3(index * 2f - 2f, 1.5f, 0f);
+                GameObject dice = Instantiate(dicePrefab, spawnPoint.position + offset, Random.rotation);
+                var netObj = dice.GetComponent<NetworkObject>();
+                netObj.SpawnWithOwnership(clientId); // 👈 critical line
+                Debug.Log($"[Server] Spawned dice for player {clientId}");
+                index++;
+                Debug.Log($"[Server] Spawned {index} dice objects in scene {UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}");
+            }
+        }
+
+        Invoke(nameof(FindLocalDice), 1f);
+
+        Debug.Log($"[DiceManager] Running on {(IsServer ? "Server" : "Client")} | Prefab={dicePrefab?.name ?? "NULL"} | PrefabsCount={NetworkManager.Singleton.NetworkConfig.Prefabs.Prefabs.Count}");
+        foreach (var p in NetworkManager.Singleton.NetworkConfig.Prefabs.Prefabs)
+        {
+            Debug.Log($"Prefab in table: {p.Prefab.name}");
+        }
+
+    }
+
+
+    private void FindLocalDice()
+    {
+        var all = FindObjectsByType<DiceRoller>(FindObjectsSortMode.None);
+        myDice = null;
+
+        foreach (var d in all)
+        {
+            if (d.OwnerClientId == NetworkManager.Singleton.LocalClientId)
+            {
+                myDice = d;
+                SetDiceVisibility(d.gameObject, true);
+            }
+            else
+            {
+                SetDiceVisibility(d.gameObject, false);
+            }
+        }
+
+        if (myDice != null)
+        {
+            rollButton.interactable = true;
+            infoText.text = "Press ROLL to start!";
+        }
+        else
+        {
+            rollButton.interactable = false;
+            infoText.text = "Waiting for your dice...";
+        }
+    }
+
+    void SetDiceVisibility(GameObject dice, bool visible)
+    {
+        // Keep object active — only hide visuals
+        var renderers = dice.GetComponentsInChildren<Renderer>(true);
+        foreach (var r in renderers) r.enabled = visible;
+
+        var colliders = dice.GetComponentsInChildren<Collider>(true);
+        foreach (var c in colliders) c.enabled = visible;
+    }
+
+    void OnEnable()
+    {
+        if (rollButton != null)
+            rollButton.onClick.AddListener(OnRollClicked);
+    }
+
+    void OnDisable()
+    {
+        if (rollButton != null)
+            rollButton.onClick.RemoveListener(OnRollClicked);
+    }
+
+    void OnRollClicked()
+    {
+        if (myDice == null) return;
+        myDice.RollDiceServerRpc();
+        rollButton.interactable = false;
+        infoText.text = "Rolling...";
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void ReportDiceResultServerRpc(int value, ulong senderId)
+    {
+        if (!IsServer) return;
+
+        if (!playerRolls.ContainsKey(senderId))
+        {
+            playerRolls.Add(senderId, value);
+            Debug.Log($"Player {senderId + 1} rolled {value}");
+        }
+
+        if (playerRolls.Count == NetworkManager.Singleton.ConnectedClients.Count)
+        {
+            ResolveTurnOrder();
+        }
+    }
+
+    void ResolveTurnOrder()
+    {
+        var ordered = playerRolls.OrderByDescending(kv => kv.Value).ToList();
+        string text = "Turn Order:\n";
+
+        int rank = 1;
+        foreach (var kv in ordered)
+            text += $"{rank++}. Player {kv.Key + 1} → {kv.Value}\n";
+
+        UpdateTurnOrderClientRpc(text);
+    }
+
+    [ClientRpc]
+    void UpdateTurnOrderClientRpc(string text)
+    {
+        infoText.text = text;
+    }
+
+    [ClientRpc]
+    void SetDiceOwnerClientRpc(ulong diceId, ulong ownerId)
+    {
+        var allDice = FindObjectsByType<NetworkObject>(FindObjectsSortMode.None);
+        foreach (var obj in allDice)
+        {
+            if (obj.NetworkObjectId == diceId)
+            {
+                var dice = obj.GetComponent<DiceRoller>();
+                if (dice != null && ownerId == NetworkManager.Singleton.LocalClientId)
+                {
+                    // this is my dice, make it visible
+                    SetDiceVisibility(dice.gameObject, true);
+                }
+                else
+                {
+                    // hide others' dice
+                    SetDiceVisibility(dice.gameObject, false);
+                }
             }
         }
     }
 
-    private void SpawnDiceForClient(ulong clientId)
-    {
-        if (dicePrefab == null || spawnPoint == null)
-        {
-            Debug.LogError("❌ DiceManager: Missing prefab or spawnPoint reference!");
-            return;
-        }
-
-        // Prevent duplicate spawn
-        var existing = FindObjectsByType<DiceRoller>(FindObjectsSortMode.None);
-        if (existing.Any(d => d.OwnerClientId == clientId))
-            return;
-
-        Vector3 spawnPos = spawnPoint.position + Vector3.right * (clientId * 2f);
-        GameObject dice = Instantiate(dicePrefab, spawnPos, Quaternion.identity);
-
-        if (!dice.TryGetComponent(out NetworkObject netObj))
-        {
-            Debug.LogError("❌ Dice prefab missing NetworkObject component!");
-            return;
-        }
-
-        netObj.SpawnWithOwnership(clientId);
-        Debug.Log($"✅ Spawned dice for Player {clientId}");
-    }
-
-    private void OnRollClicked()
-    {
-        if (myDice == null)
-            myDice = FindMyDice();
-
-        if (myDice != null)
-        {
-            myDice.RequestRoll(); // Let the server roll it
-            rollButton.interactable = false;
-            infoText.text = "🎲 Rolling...";
-            Invoke(nameof(SendResultToServer), 3f);
-        }
-        else
-        {
-            Debug.LogWarning("⚠️ No dice found for this player!");
-        }
-    }
-
-    private DiceRoller FindMyDice()
-    {
-        var all = FindObjectsByType<DiceRoller>(FindObjectsSortMode.None);
-        foreach (var d in all)
-        {
-            if (d.OwnerClientId == NetworkManager.Singleton.LocalClientId)
-                return d;
-        }
-        return null;
-    }
-
-    private void SendResultToServer()
-    {
-        int result = myDice != null ? myDice.GetValue() : Random.Range(1, 7);
-        SendDiceResultServerRpc(result);
-    }
-
-    [ServerRpc(RequireOwnership = false)]
-    private void SendDiceResultServerRpc(int value, ServerRpcParams rpc = default)
-    {
-        ulong sender = rpc.Receive.SenderClientId;
-
-        if (!playerRollResults.ContainsKey(sender))
-            playerRollResults.Add(sender, value);
-
-        Debug.Log($"[Server] Player {sender} rolled {value}");
-
-        if (playerRollResults.Count == NetworkManager.Singleton.ConnectedClients.Count)
-        {
-            HandleTurnOrder();
-        }
-    }
-
-    private void HandleTurnOrder()
-    {
-        // Ensure unique dice results
-        var usedValues = new HashSet<int>();
-        foreach (var key in playerRollResults.Keys.ToList())
-        {
-            int value = playerRollResults[key];
-            while (usedValues.Contains(value))
-                value = Random.Range(1, 7);
-            usedValues.Add(value);
-            playerRollResults[key] = value;
-        }
-
-        // Sort by highest roll
-        var orderedResults = playerRollResults
-            .OrderByDescending(kv => kv.Value)
-            .ToDictionary(kv => kv.Key, kv => kv.Value);
-
-        string orderText = "🎯 Turn Order:\n";
-        int rank = 1;
-        foreach (var kv in orderedResults)
-        {
-            orderText += $"{rank++}. Player {kv.Key} 🎲 {kv.Value}\n";
-        }
-
-        Debug.Log(orderText);
-        UpdateTurnOrderClientRpc(orderText);
-
-        Invoke(nameof(LoadMainGameScene), 4f);
-    }
-
-    [ClientRpc]
-    private void UpdateTurnOrderClientRpc(string order)
-    {
-        infoText.text = order;
-    }
-
-    private void LoadMainGameScene()
-    {
-        if (IsServer)
-            NetworkManager.Singleton.SceneManager.LoadScene("MainGame", UnityEngine.SceneManagement.LoadSceneMode.Single);
-    }
 }

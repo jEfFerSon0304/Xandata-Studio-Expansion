@@ -7,7 +7,7 @@ using System.Linq;
 public class ReadyButton : MonoBehaviour
 {
     public TMP_Text label;
-    Button button;
+    private Button button;
 
     void Awake()
     {
@@ -17,57 +17,79 @@ public class ReadyButton : MonoBehaviour
 
     void Start()
     {
-        if (label == null) label = GetComponentInChildren<TMP_Text>();
+        if (label == null)
+            label = GetComponentInChildren<TMP_Text>();
+
         PlayerNetwork.OnAnyStateChanged += UpdateLabel;
         InvokeRepeating(nameof(UpdateLabel), 0.3f, 0.3f);
     }
 
-    void OnDestroy() => PlayerNetwork.OnAnyStateChanged -= UpdateLabel;
+    void OnDestroy()
+    {
+        PlayerNetwork.OnAnyStateChanged -= UpdateLabel;
+    }
 
     void OnClick()
     {
-        if (NetworkManager.Singleton == null) return;
-
-        if (NetworkManager.Singleton.IsHost && AllPlayersReady())
-        {
-            Debug.Log("[Host] Everyone ready — starting game...");
-            LobbyManager.Instance.TryStartGame();
+        if (NetworkManager.Singleton == null)
             return;
-        }
 
-        if (PlayerNetwork.LocalPlayer != null)
+        if (NetworkManager.Singleton.IsHost)
         {
-            bool ready = PlayerNetwork.LocalPlayer.IsReady.Value;
-            PlayerNetwork.LocalPlayer.SetReadyServerRpc(!ready);
+            if (AllPlayersReady())
+            {
+                // Host can only start when everyone is ready
+                Debug.Log("[Host] All players ready. Starting game...");
+                LobbyManager.Instance.TryStartGame();
+            }
+            else
+            {
+                // Host toggles own ready state like others
+                if (PlayerNetwork.LocalPlayer != null)
+                {
+                    bool ready = PlayerNetwork.LocalPlayer.IsReady.Value;
+                    PlayerNetwork.LocalPlayer.SetReadyServerRpc(!ready);
+                }
+            }
+        }
+        else
+        {
+            // Clients just toggle ready state
+            if (PlayerNetwork.LocalPlayer != null)
+            {
+                bool ready = PlayerNetwork.LocalPlayer.IsReady.Value;
+                PlayerNetwork.LocalPlayer.SetReadyServerRpc(!ready);
+            }
         }
     }
 
     void UpdateLabel()
     {
-        if (label == null || NetworkManager.Singleton == null) return;
+        if (label == null || NetworkManager.Singleton == null)
+            return;
 
         bool allReady = AllPlayersReady();
+        bool isHost = NetworkManager.Singleton.IsHost;
+        bool isLocalReady = PlayerNetwork.LocalPlayer != null && PlayerNetwork.LocalPlayer.IsReady.Value;
 
-        if (NetworkManager.Singleton.IsHost)
+        if (isHost)
         {
-            // Host acts like everyone else until all ready
             if (allReady)
             {
                 label.text = "Start Game";
-                label.color = Color.green;
             }
             else
             {
-                label.text = PlayerNetwork.LocalPlayer?.IsReady.Value == true ? "Locked" : "Ready";
-                label.color = PlayerNetwork.LocalPlayer?.IsReady.Value == true ? Color.gray : Color.cyan;
+                label.text = isLocalReady ? "Locked" : "Ready";
             }
         }
         else
         {
-            if (PlayerNetwork.LocalPlayer == null) return;
-            label.text = PlayerNetwork.LocalPlayer.IsReady.Value ? "Locked" : "Ready";
-            label.color = PlayerNetwork.LocalPlayer.IsReady.Value ? Color.gray : Color.cyan;
+            label.text = isLocalReady ? "Locked" : "Ready";
         }
+
+        // Disable button if game not connected or host waiting
+        button.interactable = NetworkManager.Singleton.IsConnectedClient;
     }
 
     bool AllPlayersReady()
@@ -77,7 +99,9 @@ public class ReadyButton : MonoBehaviour
 #else
         var players = FindObjectsOfType<PlayerNetwork>();
 #endif
-        if (players.Length == 0) return false;
+        if (players.Length == 0)
+            return false;
+
         return players.All(p => p.IsReady.Value);
     }
 }

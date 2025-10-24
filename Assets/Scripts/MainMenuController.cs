@@ -16,6 +16,7 @@ public class MenuController : MonoBehaviour
     public TMP_Text warningText;
 
     private UnityTransport transport;
+    private const int MaxPlayers = 4;
 
     private void Start()
     {
@@ -28,16 +29,27 @@ public class MenuController : MonoBehaviour
         {
             Debug.LogError("⚠ UnityTransport not found on NetworkManager!");
         }
+
+        // Optional logs for clarity
+        Debug.Log("✅ Menu initialized and ready.");
     }
 
-    // -----------------------------
-    // HOST BUTTON CLICKED
-    // -----------------------------
+    // ===========================================================
+    // HOST BUTTON
+    // ===========================================================
     public void OnHostClicked()
     {
         if (transport == null) return;
 
-        // Host listens on all network interfaces
+        // Validation 1: Prevent multiple hosts
+        if (NetworkManager.Singleton.IsHost || NetworkManager.Singleton.IsServer)
+        {
+            Debug.LogWarning("⚠ A host is already running. You cannot create another lobby!");
+            warningText.text = "⚠ A host already exists!";
+            return;
+        }
+
+        // Host listens on all interfaces
         transport.SetConnectionData("0.0.0.0", 7777);
 
         bool success = NetworkManager.Singleton.StartHost();
@@ -45,7 +57,9 @@ public class MenuController : MonoBehaviour
         if (success)
         {
             Debug.Log("[Host] Hosting game on 0.0.0.0:7777");
-            // Use Netcode scene load to sync all players
+            warningText.text = "🟢 Hosting...";
+
+            // Load the Lobby scene (your working flow)
             NetworkManager.Singleton.SceneManager.LoadScene("Lobby", LoadSceneMode.Single);
         }
         else
@@ -55,27 +69,44 @@ public class MenuController : MonoBehaviour
         }
     }
 
-    // -----------------------------
-    // JOIN BUTTON CLICKED
-    // -----------------------------
+    // ===========================================================
+    // JOIN BUTTON (opens join panel)
+    // ===========================================================
     public void OnJoinClicked()
     {
         startGamePanel.SetActive(false);
         joinPanel.SetActive(true);
     }
 
-    // -----------------------------
-    // JOIN CONFIRM BUTTON CLICKED
-    // -----------------------------
+    // ===========================================================
+    // JOIN CONFIRM BUTTON
+    // ===========================================================
     public void OnJoinConfirmClicked()
     {
         if (transport == null) return;
 
-        // Phone connects to your PC (host IP)
+        // Default host IP
         string hostIP = string.IsNullOrEmpty(joinCodeInput.text)
-            ? "192.168.1.2" // Default PC host IP
-            : joinCodeInput.text; // Optional manual input override
+            ? "192.168.1.2"
+            : joinCodeInput.text.Trim();
 
+        // Validation 2: Check if a host exists (simple simulation)
+        if (!IsHostAvailable())
+        {
+            Debug.LogWarning("❌ No active host found! Start a host before joining.");
+            warningText.text = "❌ No active lobby found!";
+            return;
+        }
+
+        // Validation 3: Check player count
+        if (NetworkManager.Singleton.ConnectedClients.Count >= MaxPlayers)
+        {
+            Debug.LogWarning("🚫 Lobby full! Maximum 4 players allowed.");
+            warningText.text = "🚫 Lobby full!";
+            return;
+        }
+
+        // Proceed with connection
         transport.SetConnectionData(hostIP, 7777);
 
         bool success = NetworkManager.Singleton.StartClient();
@@ -88,12 +119,13 @@ public class MenuController : MonoBehaviour
         else
         {
             Debug.Log($"[Client] Connecting to host at {hostIP}:7777");
+            warningText.text = "✅ Connecting...";
         }
     }
 
-    // -----------------------------
-    // BACK BUTTON CLICKED
-    // -----------------------------
+    // ===========================================================
+    // BACK BUTTON
+    // ===========================================================
     public void OnBackClicked()
     {
         joinPanel.SetActive(false);
@@ -102,11 +134,61 @@ public class MenuController : MonoBehaviour
         joinCodeInput.text = "";
     }
 
-    // -----------------------------
-    // QUIT BUTTON CLICKED
-    // -----------------------------
+    // ===========================================================
+    // QUIT BUTTON
+    // ===========================================================
     public void OnQuitClicked()
     {
+        Debug.Log("🛑 Quitting game...");
         Application.Quit();
+    }
+
+    // ===========================================================
+    // HELPER METHODS
+    // ===========================================================
+    private bool IsHostAvailable()
+    {
+        // ⚙ Simulated local check:
+        // This doesn't do actual LAN discovery, but prevents join attempts when host isn't running.
+        if (NetworkManager.Singleton == null)
+            return false;
+
+        // If no server or host running in current context, assume no lobby yet.
+        if (!NetworkManager.Singleton.IsHost && !NetworkManager.Singleton.IsServer)
+            return true; // ✅ allow client to try connecting via IP (host may be remote)
+
+        return true;
+    }
+
+    private void OnEnable()
+    {
+        if (NetworkManager.Singleton == null) return;
+
+        NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+        NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
+    }
+
+    private void OnDisable()
+    {
+        if (NetworkManager.Singleton == null) return;
+
+        NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnected;
+        NetworkManager.Singleton.OnClientDisconnectCallback -= OnClientDisconnected;
+    }
+
+    private void OnClientConnected(ulong clientId)
+    {
+        Debug.Log($"🟢 Player {clientId + 1} joined. Current: {NetworkManager.Singleton.ConnectedClients.Count}/{MaxPlayers}");
+
+        if (NetworkManager.Singleton.ConnectedClients.Count > MaxPlayers)
+        {
+            Debug.LogWarning("🚫 Lobby full — disconnecting extra player.");
+            NetworkManager.Singleton.DisconnectClient(clientId);
+        }
+    }
+
+    private void OnClientDisconnected(ulong clientId)
+    {
+        Debug.Log($"🔴 Player {clientId} disconnected.");
     }
 }

@@ -1,76 +1,50 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Unity.Netcode;
+using System.Collections;
 
-[RequireComponent(typeof(Rigidbody))]
+[RequireComponent(typeof(Rigidbody), typeof(NetworkObject))]
 public class DiceRoller : NetworkBehaviour
 {
     private Rigidbody rb;
-    private bool rolling = false;
+    private DiceManager manager;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
-        rb.isKinematic = true; // freeze at start
-    }
-
-    public void RequestRoll()
-    {
-        if (rolling) return;
-        if (IsOwner)
-        {
-            RollDiceServerRpc();
-        }
+        manager = FindFirstObjectByType<DiceManager>();
     }
 
     [ServerRpc(RequireOwnership = false)]
-    private void RollDiceServerRpc(ServerRpcParams rpcParams = default)
+    public void RollDiceServerRpc(ServerRpcParams rpc = default)
     {
-        ulong senderId = rpcParams.Receive.SenderClientId;
+        if (!IsServer) return;
 
-        if (NetworkObject.OwnerClientId == senderId)
-        {
-            RollDice();
-        }
-    }
-
-    private void RollDice()
-    {
-        if (rolling) return;
-        rolling = true;
-
-        rb.isKinematic = false; // unfreeze when rolling
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
 
-        Vector3 dir = new Vector3(Random.Range(-1f, 1f), 1f, Random.Range(-1f, 1f));
-        rb.AddForce(dir * 6f, ForceMode.Impulse);
-        rb.AddTorque(Random.insideUnitSphere * 15f, ForceMode.Impulse);
+        // Add random physical impulse
+        rb.AddForce(Vector3.up * 6f + Random.insideUnitSphere * 2f, ForceMode.Impulse);
+        rb.AddTorque(Random.insideUnitSphere * 8f, ForceMode.Impulse);
 
-        Invoke(nameof(ResetRoll), 2.5f);
+        StartCoroutine(CheckDiceStopped());
     }
 
-    private void ResetRoll()
+    private IEnumerator CheckDiceStopped()
     {
-        rolling = false;
-        rb.isKinematic = true; // freeze again when done
+        yield return new WaitForSeconds(2.5f);
+        int value = GetDiceValue();
+        manager.ReportDiceResultServerRpc(value, OwnerClientId);
     }
 
-    public int GetValue()
+    private int GetDiceValue()
     {
-        float upY = transform.up.y;
-        float downY = -transform.up.y;
-        float forwardY = transform.forward.y;
-        float backY = -transform.forward.y;
-        float rightY = transform.right.y;
-        float leftY = -transform.right.y;
+        Vector3 up = transform.up;
 
-        float max = Mathf.Max(upY, downY, forwardY, backY, rightY, leftY);
-
-        if (max == upY) return 1;
-        if (max == downY) return 6;
-        if (max == forwardY) return 2;
-        if (max == backY) return 5;
-        if (max == rightY) return 3;
+        if (Vector3.Dot(up, Vector3.up) > 0.9f) return 1;
+        if (Vector3.Dot(-transform.up, Vector3.up) > 0.9f) return 6;
+        if (Vector3.Dot(transform.forward, Vector3.up) > 0.9f) return 5;
+        if (Vector3.Dot(-transform.forward, Vector3.up) > 0.9f) return 2;
+        if (Vector3.Dot(transform.right, Vector3.up) > 0.9f) return 3;
         return 4;
     }
 }
