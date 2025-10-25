@@ -68,10 +68,46 @@ public class LobbyUIController : MonoBehaviour
     void Change(int dir)
     {
         if (PlayerNetwork.LocalPlayer == null) return;
-        var me = PlayerNetwork.LocalPlayer;
-        if (me.State != null && me.State.IsReady.Value) return;
 
-        int newIndex = (me.SelectedCharacterIndex.Value + dir + characters.Length) % characters.Length;
-        me.SetCharacterIndexServerRpc(newIndex);
+        var me = PlayerNetwork.LocalPlayer;
+
+        if (me.State != null && me.State.IsReady.Value)
+            return; // locked players cannot change
+
+        int current = me.SelectedCharacterIndex.Value;
+        int next = current;
+
+        // Try to find a character that is NOT locked by others
+        for (int i = 0; i < characters.Length; i++)
+        {
+            next = (next + dir + characters.Length) % characters.Length;
+
+            if (!IsCharacterLockedByOtherPlayer(next))
+                break;
+        }
+
+        me.SetCharacterIndexServerRpc(next);
     }
+
+    bool IsCharacterLockedByOtherPlayer(int index)
+    {
+        var players = FindObjectsByType<PlayerNetwork>(FindObjectsSortMode.None);
+
+        foreach (var p in players)
+        {
+            // ignore yourself
+            if (p.OwnerClientId == PlayerNetwork.LocalPlayer.OwnerClientId)
+                continue;
+
+            // someone else locked and using this character
+            if (p.State != null &&
+                p.State.IsReady.Value &&
+                p.SelectedCharacterIndex.Value == index)
+                return true;
+        }
+
+        return false;
+    }
+
+
 }
