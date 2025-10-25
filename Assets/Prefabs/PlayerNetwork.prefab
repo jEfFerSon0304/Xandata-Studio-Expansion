@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 5492563557765679006}
   - component: {fileID: 8838901840665819247}
   - component: {fileID: 4745865019772604741}
+  - component: {fileID: -2217264315727888793}
   m_Layer: 0
   m_Name: PlayerNetwork
   m_TagString: Untagged
@@ -45,7 +46,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 4275699680
+  GlobalObjectIdHash: 944722404
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -71,9 +72,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerNetwork
   ShowTopMostFoldoutHeaderGroup: 1
+  State: {fileID: -2217264315727888793}
   SelectedCharacterIndex:
     m_InternalValue: -1
-  IsReady:
-    m_InternalValue: 0
   SlotIndex:
     m_InternalValue: -1
+--- !u!114 &-2217264315727888793
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 972822592065883664}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a78b83011dbdf184980434641a1c60e7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerStateNetwork
+  ShowTopMostFoldoutHeaderGroup: 1
+  IsReady:
+    m_InternalValue: 0

@@ -1,80 +1,65 @@
 ﻿using UnityEngine;
 using Unity.Netcode;
-using System;
 using System.Linq;
+using System.Collections;
 
 public class PlayerNetwork : NetworkBehaviour
 {
     public static PlayerNetwork LocalPlayer;
-    public static event Action OnAnyStateChanged;
+    public PlayerStateNetwork State;
 
-    public NetworkVariable<int> SelectedCharacterIndex = new(
-        -1,
-        NetworkVariableReadPermission.Everyone,
-        NetworkVariableWritePermission.Server
-    );
+    public NetworkVariable<int> SelectedCharacterIndex =
+        new(-1, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
-    public NetworkVariable<bool> IsReady = new(
-        false,
-        NetworkVariableReadPermission.Everyone,
-        NetworkVariableWritePermission.Server
-    );
+    public NetworkVariable<int> SlotIndex =
+        new(-1, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
-    void Awake() => DontDestroyOnLoad(gameObject);
+    void Awake()
+    {
+        DontDestroyOnLoad(gameObject);
+    }
 
     public override void OnNetworkSpawn()
     {
+        State = GetComponent<PlayerStateNetwork>(); // ✅ Move BEFORE LocalPlayer assignment
+
         if (IsOwner)
             LocalPlayer = this;
 
-        // Only server can write to NetworkVariables
+        State = GetComponent<PlayerStateNetwork>();
+
         if (IsServer)
-        {
-            IsReady.Value = false;
-            Debug.Log($"[Server] Player {OwnerClientId} starts unready ⏳");
-        }
-
-        // Subscribe to ready-state changes for UI updates
-        IsReady.OnValueChanged += (_, __) => OnAnyStateChanged?.Invoke();
+            StartCoroutine(WaitForDBAndAssign());
     }
 
-
-    [ServerRpc(RequireOwnership = false)]
-    public void SetCharacterIndexServerRpc(int index, ServerRpcParams rpc = default)
+    private IEnumerator WaitForDBAndAssign()
     {
-        if (!IsServer) return;
+        while (GameDatabase.Instance == null || GameDatabase.Instance.characters.Length == 0)
+            yield return null;
 
-        ulong senderId = rpc.Receive.SenderClientId;
-        var player = FindObjectsByType<PlayerNetwork>(FindObjectsSortMode.None)
-            .FirstOrDefault(p => p.OwnerClientId == senderId);
+        var db = GameDatabase.Instance;
+        var players = FindObjectsByType<PlayerNetwork>(FindObjectsSortMode.None)
+            .OrderBy(p => p.OwnerClientId)
+            .ToList();
 
-        if (player == null || player.IsReady.Value) return;
+        SlotIndex.Value = players.IndexOf(this);
 
-        player.SelectedCharacterIndex.Value = index;
-        OnAnyStateChanged?.Invoke();
+        if (SelectedCharacterIndex.Value < 0)
+            SelectedCharacterIndex.Value = SlotIndex.Value % db.characters.Length;
+
+        Debug.Log($"Assigned: Client {OwnerClientId}, Slot {SlotIndex.Value}, Character {SelectedCharacterIndex.Value}");
     }
 
     [ServerRpc(RequireOwnership = false)]
-    public void SetReadyServerRpc(bool ready, ServerRpcParams rpc = default)
+    public void SetCharacterIndexServerRpc(int index)
     {
-        if (!IsServer) return;
-
-        ulong senderId = rpc.Receive.SenderClientId;
-        var player = FindObjectsByType<PlayerNetwork>(FindObjectsSortMode.None)
-            .FirstOrDefault(p => p.OwnerClientId == senderId);
-
-        if (player == null) return;
-
-        if (ready && player.SelectedCharacterIndex.Value < 0)
-        {
-            Debug.Log($"[Server] Player {senderId} tried to ready without selecting a character ❌");
-            return;
-        }
-
-        player.IsReady.Value = ready;
-        Debug.Log($"[Server] Player {senderId} Ready = {ready}");
-        OnAnyStateChanged?.Invoke();
+        SelectedCharacterIndex.Value = index;
     }
 
-    public static void NotifyUpdate() => OnAnyStateChanged?.Invoke();
+    [ServerRpc(RequireOwnership = false)]
+    public void SetReadyServerRpc(bool ready)
+    {
+        if (State != null)
+            State.IsReady.Value = ready;
+    }
 }

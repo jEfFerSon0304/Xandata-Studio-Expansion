@@ -22,19 +22,20 @@ public class LobbyManager : MonoBehaviour
     {
         if (!NetworkManager.Singleton.IsServer) return;
 
-#if UNITY_2023_1_OR_NEWER
         var players = FindObjectsByType<PlayerNetwork>(FindObjectsSortMode.None);
-#else
-        var players = FindObjectsOfType<PlayerNetwork>();
-#endif
-        if (players.Length == 0) return;
-        if (!players.All(p => p.IsReady.Value))
+        if (players.Length < 2)
         {
-            Debug.Log("[LobbyManager] Not all players are ready yet.");
+            Debug.Log("Not enough players to start!");
             return;
         }
 
-        Debug.Log("[LobbyManager] All players ready. Loading DiceRoll scene...");
-        NetworkManager.Singleton.SceneManager.LoadScene("DiceRoll", LoadSceneMode.Single);
+        if (!players.All(p => p.State != null && p.State.IsReady.Value))
+        {
+            Debug.Log("Players not ready yet!");
+            return;
+        }
+
+        NetworkManager.Singleton.SceneManager.LoadScene("DiceRollScene",
+            LoadSceneMode.Single);
     }
 }

@@ -12,96 +12,71 @@ public class ReadyButton : MonoBehaviour
     void Awake()
     {
         button = GetComponent<Button>();
-        button.onClick.AddListener(OnClick);
+        button.onClick.AddListener(Click);
     }
 
     void Start()
     {
-        if (label == null)
-            label = GetComponentInChildren<TMP_Text>();
-
-        PlayerNetwork.OnAnyStateChanged += UpdateLabel;
-        InvokeRepeating(nameof(UpdateLabel), 0.3f, 0.3f);
+        InvokeRepeating(nameof(UpdateLabel), 0.2f, 0.2f);
     }
 
-    void OnDestroy()
+    void Click()
     {
-        PlayerNetwork.OnAnyStateChanged -= UpdateLabel;
-    }
+        if (PlayerNetwork.LocalPlayer == null) return;
 
-    void OnClick()
-    {
-        if (NetworkManager.Singleton == null)
+        if (PlayerNetwork.LocalPlayer.State == null)
+        {
+            Debug.Log("State not ready");
             return;
+        }
 
-        if (NetworkManager.Singleton.IsHost)
+        bool ready = PlayerNetwork.LocalPlayer.State.IsReady.Value;
+
+        if (NetworkManager.Singleton.IsHost && AllReady())
         {
-            if (AllPlayersReady())
-            {
-                // Host can only start when everyone is ready
-                Debug.Log("[Host] All players ready. Starting game...");
-                LobbyManager.Instance.TryStartGame();
-            }
-            else
-            {
-                // Host toggles own ready state like others
-                if (PlayerNetwork.LocalPlayer != null)
-                {
-                    bool ready = PlayerNetwork.LocalPlayer.IsReady.Value;
-                    PlayerNetwork.LocalPlayer.SetReadyServerRpc(!ready);
-                }
-            }
+            LobbyManager.Instance.TryStartGame();
+            return;
         }
-        else
-        {
-            // Clients just toggle ready state
-            if (PlayerNetwork.LocalPlayer != null)
-            {
-                bool ready = PlayerNetwork.LocalPlayer.IsReady.Value;
-                PlayerNetwork.LocalPlayer.SetReadyServerRpc(!ready);
-            }
-        }
+
+        PlayerNetwork.LocalPlayer.SetReadyServerRpc(!ready);
     }
 
     void UpdateLabel()
     {
-        if (label == null || NetworkManager.Singleton == null)
-            return;
-
-        bool allReady = AllPlayersReady();
-        bool isHost = NetworkManager.Singleton.IsHost;
-        bool isLocalReady = PlayerNetwork.LocalPlayer != null && PlayerNetwork.LocalPlayer.IsReady.Value;
-
-        if (isHost)
+        if (PlayerNetwork.LocalPlayer == null)
         {
-            if (allReady)
-            {
-                label.text = "Start Game";
-            }
-            else
-            {
-                label.text = isLocalReady ? "Locked" : "Ready";
-            }
+            label.text = "Loading...";
+            button.interactable = false;
+            return;
+        }
+
+        if (PlayerNetwork.LocalPlayer.State == null)
+        {
+            label.text = "Syncing...";
+            return; // ✅ remove button disable so UI continues checking
+        }
+
+
+        bool ready = PlayerNetwork.LocalPlayer.State.IsReady.Value;
+        bool allReady = AllReady();
+        bool isHost = NetworkManager.Singleton.IsHost;
+
+        if (isHost && allReady)
+        {
+            label.text = "Start Game";
         }
         else
         {
-            label.text = isLocalReady ? "Locked" : "Ready";
+            label.text = ready ? "Locked" : "Ready";
         }
 
-        // Disable button if game not connected or host waiting
-        button.interactable = NetworkManager.Singleton.IsConnectedClient;
+        button.interactable = true;
     }
 
-    bool AllPlayersReady()
+    bool AllReady()
     {
-#if UNITY_2023_1_OR_NEWER
-        var players = FindObjectsByType<PlayerNetwork>(FindObjectsSortMode.None);
-#else
-        var players = FindObjectsOfType<PlayerNetwork>();
-#endif
-        if (players.Length == 0)
-            return false;
-
-        return players.All(p => p.IsReady.Value);
+        var list = FindObjectsByType<PlayerNetwork>(FindObjectsSortMode.None);
+        if (list.Length < 2) return false;
+        return list.All(p => p.State != null && p.State.IsReady.Value);
     }
 }

@@ -1,136 +1,77 @@
 ﻿using UnityEngine;
-using Unity.Netcode;
-using System.Collections.Generic;
 using System.Linq;
 
-public class LobbyUIController : NetworkBehaviour
+public class LobbyUIController : MonoBehaviour
 {
-    [Header("UI References")]
-    public Transform container;                // Parent that holds player cards
-    public GameObject cardPrefab;              // Prefab for each player's card
-    public CharacterDataSO[] allCharacters;    // Array of available characters
-
-    private Dictionary<ulong, PlayerCardUI> cards = new();
+    public PlayerSlotUI[] slots;
+    public CharacterDataSO[] characters;
+    public GameObject cardPrefab;
 
     void Start()
     {
-        PlayerNetwork.OnAnyStateChanged += RefreshInstant;
         InvokeRepeating(nameof(Refresh), 0.3f, 0.3f);
     }
 
-    public override void OnDestroy()
-    {
-        base.OnDestroy();
-        PlayerNetwork.OnAnyStateChanged -= RefreshInstant;
-    }
-
-    void RefreshInstant() => Refresh();
-
     void Refresh()
     {
-        var players = FindObjectsByType<PlayerNetwork>(FindObjectsSortMode.None).OrderBy(p => p.OwnerClientId).ToList();
+        if (GameDatabase.Instance == null) return;
 
-        // Create missing player cards
-        foreach (var p in players)
+        var players = FindObjectsByType<PlayerNetwork>(FindObjectsSortMode.None)
+            .OrderBy(p => p.SlotIndex.Value)
+            .ToList();
+
+        for (int i = 0; i < slots.Length; i++)
         {
-            if (!cards.ContainsKey(p.OwnerClientId))
+            if (i >= players.Count)
             {
-                var card = Instantiate(cardPrefab, container).GetComponent<PlayerCardUI>();
-                card.ownerId = p.OwnerClientId;
+                slots[i].Clear();
+                continue;
+            }
 
-                // Only show control buttons for local player
-                card.ShowControls(p.IsOwner);
-                cards[p.OwnerClientId] = card;
+            var slot = slots[i];
+            var p = players[i];
 
-                // ✅ Add event listeners for local player only
+            if (slot.cardHolder.childCount == 0)
+            {
+                var card = Instantiate(cardPrefab);
+                var ui = card.GetComponent<PlayerCardUI>();
+                ui.ownerId = p.OwnerClientId;
+                ui.ShowControls(p.IsOwner);
+                slot.SetCard(card);
+
                 if (p.IsOwner)
                 {
-                    if (card.prev != null)
-                        card.prev.onClick.AddListener(() => Change(-1));
+                    ui.prev.onClick.RemoveAllListeners();
+                    ui.next.onClick.RemoveAllListeners();
 
-                    if (card.next != null)
-                        card.next.onClick.AddListener(() => Change(1));
+                    ui.prev.onClick.AddListener(() => Change(-1));
+                    ui.next.onClick.AddListener(() => Change(1));
                 }
-
-                // Assign initial character (server only)
-                if (IsServer && p.SelectedCharacterIndex.Value < 0)
-                    AssignFirstAvailableCharacter(p);
-
             }
 
-            UpdateCard(p);
-        }
-
-        // Remove cards for disconnected players
-        var ids = cards.Keys.ToList();
-        foreach (var id in ids)
-        {
-            if (!players.Any(p => p.OwnerClientId == id))
-            {
-                Destroy(cards[id].gameObject);
-                cards.Remove(id);
-            }
+            UpdateSlot(slot, p);
         }
     }
 
-    void UpdateCard(PlayerNetwork p)
+    void UpdateSlot(PlayerSlotUI slot, PlayerNetwork p)
     {
-        if (!cards.ContainsKey(p.OwnerClientId)) return;
+        var idx = p.SelectedCharacterIndex.Value;
+        if (idx < 0 || idx >= characters.Length) return;
 
-        var card = cards[p.OwnerClientId];
-        var data = (p.SelectedCharacterIndex.Value >= 0 && p.SelectedCharacterIndex.Value < allCharacters.Length)
-            ? allCharacters[p.SelectedCharacterIndex.Value]
-            : null;
+        var cardUI = slot.cardHolder.GetComponentInChildren<PlayerCardUI>();
+        var data = characters[idx];
 
-        bool isLocked = p.IsReady.Value;
-
-        card.SetData(data?.portrait, data?.characterName ?? "—", isLocked);
-
-        // Disable local controls when locked
-        if (p.IsOwner)
-        {
-            card.prev.interactable = !isLocked;
-            card.next.interactable = !isLocked;
-        }
+        cardUI.SetData(data.portrait, data.characterName,
+            p.State != null && p.State.IsReady.Value);
     }
 
     void Change(int dir)
     {
         if (PlayerNetwork.LocalPlayer == null) return;
-        if (PlayerNetwork.LocalPlayer.IsReady.Value) return; // can't change while locked
+        var me = PlayerNetwork.LocalPlayer;
+        if (me.State != null && me.State.IsReady.Value) return;
 
-        int cur = PlayerNetwork.LocalPlayer.SelectedCharacterIndex.Value;
-        int next = (cur + dir + allCharacters.Length) % allCharacters.Length;
-
-        // Skip locked characters
-        var locked = GetLockedIndices();
-        while (locked.Contains(next))
-            next = (next + dir + allCharacters.Length) % allCharacters.Length;
-
-        PlayerNetwork.LocalPlayer.SetCharacterIndexServerRpc(next);
-    }
-
-    void AssignFirstAvailableCharacter(PlayerNetwork player)
-    {
-        var locked = GetLockedIndices();
-
-        for (int i = 0; i < allCharacters.Length; i++)
-        {
-            if (!locked.Contains(i))
-            {
-                player.SetCharacterIndexServerRpc(i);
-                break;
-            }
-        }
-    }
-
-    HashSet<int> GetLockedIndices()
-    {
-        var players = FindObjectsByType<PlayerNetwork>(FindObjectsSortMode.None);
-        return new HashSet<int>(
-            players.Where(p => p.IsReady.Value)
-                   .Select(p => p.SelectedCharacterIndex.Value)
-                   .Where(i => i >= 0)
-        );
+        int newIndex = (me.SelectedCharacterIndex.Value + dir + characters.Length) % characters.Length;
+        me.SetCharacterIndexServerRpc(newIndex);
     }
 }
