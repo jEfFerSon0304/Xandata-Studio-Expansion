@@ -35,7 +35,7 @@ public class LobbyManager : MonoBehaviour
             return;
         }
 
-        NetworkManager.Singleton.SceneManager.LoadScene("DiceRoll",
+        NetworkManager.Singleton.SceneManager.LoadScene("DiceRollScene",
             LoadSceneMode.Single);
     }
 }
