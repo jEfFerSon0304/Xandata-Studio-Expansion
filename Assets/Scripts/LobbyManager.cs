@@ -34,7 +34,7 @@ public class LobbyManager : MonoBehaviour
             return;
         }
 
-        Debug.Log("[LobbyManager] All players ready. Loading MainGame scene...");
+        Debug.Log("[LobbyManager] All players ready. Loading DiceRoll scene...");
         NetworkManager.Singleton.SceneManager.LoadScene("DiceRoll", LoadSceneMode.Single);
     }
 }
