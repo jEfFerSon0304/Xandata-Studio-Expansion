@@ -1,172 +1,249 @@
-﻿using UnityEngine;
-using Unity.Netcode;
-using UnityEngine.UI;
-using TMPro;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
+using TMPro;
+using Unity.Netcode;
+using UnityEngine;
+using UnityEngine.UI;
 
+[RequireComponent(typeof(NetworkObject))]
 public class DiceManager : NetworkBehaviour
 {
     [Header("UI")]
-    public Button rollButton;
     public TMP_Text infoText;
+    public TMP_Text orderText;
+    public Button rollButton;
 
-    [Header("Dice Settings")]
+    [Header("Dice")]
     public GameObject dicePrefab;
     public Transform spawnPoint;
 
-    private DiceRoller myDice;
-    private static Dictionary<ulong, int> playerRolls = new();
+    // Server-authoritative state
+    private readonly Dictionary<ulong, int> results = new();       // last roll per player
+    private readonly Dictionary<ulong, int> finalRanks = new();    // rank per player (1..N)
+    private readonly Dictionary<ulong, Color> playerColors = new();// color per player
 
+    private int TotalPlayers => NetworkManager.Singleton.ConnectedClientsIds.Count;
 
+    // ---------- Lifecycle ----------
     public override void OnNetworkSpawn()
     {
-        Debug.Log($"[DiceManager] OnNetworkSpawn() called on {(IsServer ? "Server" : "Client")}");
+        // Host/Server setup
+        rollButton.gameObject.SetActive(IsServer);
+        rollButton.onClick.AddListener(OnHostRollPressed);
 
         if (IsServer)
         {
-            playerRolls.Clear();
-            int index = 0;
-
-            foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
-            {
-                Vector3 offset = new Vector3(index * 2f - 2f, 1.5f, 0f);
-                GameObject dice = Instantiate(dicePrefab, spawnPoint.position + offset, Random.rotation);
-                var netObj = dice.GetComponent<NetworkObject>();
-                netObj.SpawnWithOwnership(clientId); // 👈 critical line
-                Debug.Log($"[Server] Spawned dice for player {clientId}");
-                index++;
-                Debug.Log($"[Server] Spawned {index} dice objects in scene {UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}");
-            }
-        }
-
-        Invoke(nameof(FindLocalDice), 1f);
-
-        Debug.Log($"[DiceManager] Running on {(IsServer ? "Server" : "Client")} | Prefab={dicePrefab?.name ?? "NULL"} | PrefabsCount={NetworkManager.Singleton.NetworkConfig.Prefabs.Prefabs.Count}");
-        foreach (var p in NetworkManager.Singleton.NetworkConfig.Prefabs.Prefabs)
-        {
-            Debug.Log($"Prefab in table: {p.Prefab.name}");
-        }
-
-    }
-
-
-    private void FindLocalDice()
-    {
-        var all = FindObjectsByType<DiceRoller>(FindObjectsSortMode.None);
-        myDice = null;
-
-        foreach (var d in all)
-        {
-            if (d.OwnerClientId == NetworkManager.Singleton.LocalClientId)
-            {
-                myDice = d;
-                SetDiceVisibility(d.gameObject, true);
-            }
-            else
-            {
-                SetDiceVisibility(d.gameObject, false);
-            }
-        }
-
-        if (myDice != null)
-        {
-            rollButton.interactable = true;
-            infoText.text = "Press ROLL to start!";
+            // First time server spawns: create dice and sync initial colors/state
+            SpawnDiceForAll();
+            PushFullSyncToAll();
         }
         else
         {
-            rollButton.interactable = false;
-            infoText.text = "Waiting for your dice...";
+            // Clients request the latest state when they spawn this scene object
+            RequestFullSyncServerRpc();
         }
+
+        UpdateLocalUI(); // safe no-op if data not yet here
     }
 
-    void SetDiceVisibility(GameObject dice, bool visible)
-    {
-        // Keep object active — only hide visuals
-        var renderers = dice.GetComponentsInChildren<Renderer>(true);
-        foreach (var r in renderers) r.enabled = visible;
-
-        var colliders = dice.GetComponentsInChildren<Collider>(true);
-        foreach (var c in colliders) c.enabled = visible;
-    }
-
-    void OnEnable()
-    {
-        if (rollButton != null)
-            rollButton.onClick.AddListener(OnRollClicked);
-    }
-
-    void OnDisable()
-    {
-        if (rollButton != null)
-            rollButton.onClick.RemoveListener(OnRollClicked);
-    }
-
-    void OnRollClicked()
-    {
-        if (myDice == null) return;
-        myDice.RollDiceServerRpc();
-        rollButton.interactable = false;
-        infoText.text = "Rolling...";
-    }
-
-    [ServerRpc(RequireOwnership = false)]
-    public void ReportDiceResultServerRpc(int value, ulong senderId)
+    // ---------- Host-only actions ----------
+    private void OnHostRollPressed()
     {
         if (!IsServer) return;
 
-        if (!playerRolls.ContainsKey(senderId))
-        {
-            playerRolls.Add(senderId, value);
-            Debug.Log($"Player {senderId + 1} rolled {value}");
-        }
+        rollButton.interactable = false;
+        results.Clear(); // new round
+        UpdateLocalUI();
 
-        if (playerRolls.Count == NetworkManager.Singleton.ConnectedClients.Count)
+        // Roll all active dice (everyone watches host physics)
+        foreach (var dice in FindObjectsByType<DiceRoller>(FindObjectsSortMode.None))
+            dice.RollDiceServerRpc();
+    }
+
+    private void SpawnDiceForAll()
+    {
+        Color[] palette = { Color.red, Color.blue, Color.green, Color.yellow };
+        int idx = 0;
+
+        foreach (var clientId in NetworkManager.Singleton.ConnectedClientsIds)
         {
-            ResolveTurnOrder();
+            Vector3 offset = Vector3.right * (idx * 2f);
+            var dice = Instantiate(dicePrefab, spawnPoint.position + offset, spawnPoint.rotation);
+            var no = dice.GetComponent<NetworkObject>();
+            no.SpawnWithOwnership(clientId);
+
+            var color = palette[idx % palette.Length];
+            playerColors[clientId] = color;
+
+            var rend = dice.GetComponentInChildren<Renderer>();
+            if (rend) rend.material.color = color;
+
+            idx++;
         }
     }
 
-    void ResolveTurnOrder()
+    // Called by DiceRoller on server when a value is determined
+    [ServerRpc(RequireOwnership = false)]
+    public void ReportResultServerRpc(int value, ulong playerId)
     {
-        var ordered = playerRolls.OrderByDescending(kv => kv.Value).ToList();
-        string text = "Turn Order:\n";
+        results[playerId] = value;
+        if (results.Count == TotalPlayers)
+        {
+            // Simple order: highest to lowest (ties get next rank positions in order received)
+            var ordered = results.OrderByDescending(kv => kv.Value).ToList();
+            finalRanks.Clear();
+            for (int i = 0; i < ordered.Count; i++)
+                finalRanks[ordered[i].Key] = i + 1;
 
-        int rank = 1;
-        foreach (var kv in ordered)
-            text += $"{rank++}. Player {kv.Key + 1} → {kv.Value}\n";
+            rollButton.interactable = true;
+        }
+        PushFullSyncToAll();
+    }
 
-        UpdateTurnOrderClientRpc(text);
+    // ---------- Sync helpers ----------
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestFullSyncServerRpc(ServerRpcParams rpc = default)
+    {
+        PushFullSyncToAll(); // just broadcast current truth
+    }
+
+    private void PushFullSyncToAll()
+    {
+        // pack ranks
+        var rankStates = finalRanks.Select(kv => new RankState
+        {
+            playerId = kv.Key,
+            rank = kv.Value
+        }).ToArray();
+
+        // pack results
+        var resultStates = results.Select(kv => new ResultState
+        {
+            playerId = kv.Key,
+            value = kv.Value
+        }).ToArray();
+
+        // pack colors
+        var colorStates = playerColors.Select(kv => new ColorState
+        {
+            playerId = kv.Key,
+            r = kv.Value.r,
+            g = kv.Value.g,
+            b = kv.Value.b,
+            a = kv.Value.a
+        }).ToArray();
+
+        ApplyFullSyncClientRpc(rankStates, resultStates, colorStates);
     }
 
     [ClientRpc]
-    void UpdateTurnOrderClientRpc(string text)
+    private void ApplyFullSyncClientRpc(RankState[] ranks, ResultState[] res, ColorState[] cols)
     {
-        infoText.text = text;
-    }
+        // rebuild local mirrors
+        finalRanks.Clear();
+        results.Clear();
 
-    [ClientRpc]
-    void SetDiceOwnerClientRpc(ulong diceId, ulong ownerId)
-    {
-        var allDice = FindObjectsByType<NetworkObject>(FindObjectsSortMode.None);
-        foreach (var obj in allDice)
+        foreach (var c in cols)
         {
-            if (obj.NetworkObjectId == diceId)
+            var col = new Color(c.r, c.g, c.b, c.a);
+            playerColors[c.playerId] = col;
+
+            // Try apply to spawned dice (host & clients)
+            var dice = FindObjectsByType<DiceRoller>(FindObjectsSortMode.None)
+                       .FirstOrDefault(d => d.OwnerClientId == c.playerId);
+            if (dice != null)
             {
-                var dice = obj.GetComponent<DiceRoller>();
-                if (dice != null && ownerId == NetworkManager.Singleton.LocalClientId)
-                {
-                    // this is my dice, make it visible
-                    SetDiceVisibility(dice.gameObject, true);
-                }
-                else
-                {
-                    // hide others' dice
-                    SetDiceVisibility(dice.gameObject, false);
-                }
+                var rend = dice.GetComponentInChildren<Renderer>();
+                if (rend) rend.material.color = col;
             }
         }
+
+        foreach (var r in res) results[r.playerId] = r.value;
+        foreach (var r in ranks) finalRanks[r.playerId] = r.rank;
+
+        UpdateLocalUI();
     }
 
+    // ---------- UI ----------
+    private void UpdateLocalUI()
+    {
+        ulong me = NetworkManager.Singleton.LocalClientId;
+
+        // Info text (personal + status)
+        string myColor = playerColors.ContainsKey(me) ? ColorToName(playerColors[me]) : "N/A";
+        infoText.text = $"Your Dice: {myColor}\n";
+
+        if (finalRanks.TryGetValue(me, out int myRank))
+            infoText.text += $"Locked Rank: {myRank}\n";
+        else if (results.ContainsKey(me))
+            infoText.text += "Waiting for others...\n";
+        else
+            infoText.text += IsServer ? "Press ROLL!" : "Waiting for host...\n";
+
+        // Order text (global)
+        if (finalRanks.Count > 0)
+        {
+            orderText.text = string.Join("\n",
+                finalRanks.OrderBy(kv => kv.Value).Select(kv =>
+                {
+                    string cname = playerColors.ContainsKey(kv.Key) ? ColorToName(playerColors[kv.Key]) : "N/A";
+                    return $"Rank {kv.Value}: Player {kv.Key + 1} ({cname})";
+                }));
+        }
+        else
+        {
+            orderText.text = "";
+        }
+
+        // Host-only roll button
+        rollButton.gameObject.SetActive(IsServer);
+        if (IsServer && finalRanks.Count == 0)
+            rollButton.interactable = true;
+    }
+
+    private static string ColorToName(Color c)
+    {
+        if (c == Color.red) return "RED";
+        if (c == Color.blue) return "BLUE";
+        if (c == Color.green) return "GREEN";
+        if (c == Color.yellow) return "YELLOW";
+        return "UNKNOWN";
+    }
+
+    // ---------- Net-serializable state ----------
+    public struct RankState : INetworkSerializable
+    {
+        public ulong playerId;
+        public int rank;
+        public void NetworkSerialize<T>(BufferSerializer<T> s) where T : IReaderWriter
+        {
+            s.SerializeValue(ref playerId);
+            s.SerializeValue(ref rank);
+        }
+    }
+
+    public struct ResultState : INetworkSerializable
+    {
+        public ulong playerId;
+        public int value;
+        public void NetworkSerialize<T>(BufferSerializer<T> s) where T : IReaderWriter
+        {
+            s.SerializeValue(ref playerId);
+            s.SerializeValue(ref value);
+        }
+    }
+
+    public struct ColorState : INetworkSerializable
+    {
+        public ulong playerId;
+        public float r, g, b, a;
+        public void NetworkSerialize<T>(BufferSerializer<T> s) where T : IReaderWriter
+        {
+            s.SerializeValue(ref playerId);
+            s.SerializeValue(ref r);
+            s.SerializeValue(ref g);
+            s.SerializeValue(ref b);
+            s.SerializeValue(ref a);
+        }
+    }
 }
