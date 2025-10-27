@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using UnityEngine.SceneManagement;
 using System.Collections;
-using UnityEngine.InputSystem; // For new Input System (optional)
+using UnityEngine.InputSystem; // new Input System
 
 public class SplashController : MonoBehaviour
 {
@@ -36,10 +36,11 @@ public class SplashController : MonoBehaviour
 
     void Update()
     {
-        // Detect skip input: touch or mouse click
+        // Detect skip input using new Input System
         if (!skipRequested)
         {
-            if (Input.GetMouseButtonDown(0) ||
+            // Check for mouse click or touchscreen tap
+            if ((Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) ||
                 (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasPressedThisFrame))
             {
                 skipRequested = true;

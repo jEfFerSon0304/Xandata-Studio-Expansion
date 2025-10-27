@@ -3,48 +3,59 @@ using UnityEngine.SceneManagement;
 
 public class MainMenuUI : MonoBehaviour
 {
-    [Header("Panels")]
-    public GameObject mainMenuPanel;
-    public GameObject settingsPanel;
-    public GameObject exitConfirmPanel;
+    [Header("Panels / UI Elements")]
+    public GameObject mainMenuPanel;      // Contains everything (background, clouds, logo, buttons)
+    public GameObject logo;               // Logo inside MainMenuPanel
+    public GameObject buttonGroup;        // Buttons inside MainMenuPanel
+    public GameObject settingsPanel;      // Settings panel
+    public GameObject exitConfirmPanel;   // Exit confirmation panel (optional, later)
 
+    // Called when Start Game button is clicked
     public void StartGame()
     {
         SceneManager.LoadScene("GameScene"); // Replace with your gameplay scene name
     }
 
+    // Called when How To Play button is clicked
     public void OpenHowToPlay()
     {
-        SceneManager.LoadScene("HowToPlay"); // Replace with your how-to-play scene name
+        SceneManager.LoadScene("HowToPlay"); // Replace with your scene name
     }
 
+    // Called when Settings button is clicked
     public void OpenSettings()
     {
-        settingsPanel.SetActive(true);
-        mainMenuPanel.SetActive(false);
+        if (logo != null) logo.SetActive(false);           // hide logo
+        if (buttonGroup != null) buttonGroup.SetActive(false); // hide buttons
+        if (settingsPanel != null) settingsPanel.SetActive(true); // show settings panel
     }
 
-    public void OpenExitConfirm()
-    {
-        exitConfirmPanel.SetActive(true);
-        mainMenuPanel.SetActive(false);
-    }
-
+    // Called when Back button in Settings is clicked
     public void CloseSettings()
     {
-        settingsPanel.SetActive(false);
-        mainMenuPanel.SetActive(true);
+        if (settingsPanel != null) settingsPanel.SetActive(false); // hide settings panel
+        if (logo != null) logo.SetActive(true);                     // show logo again
+        if (buttonGroup != null) buttonGroup.SetActive(true);       // show buttons again
+    }
+
+    // Exit modal functions (ready for later)
+    public void OpenExitConfirm()
+    {
+        if (exitConfirmPanel != null) exitConfirmPanel.SetActive(true);
+        if (logo != null) logo.SetActive(false);
+        if (buttonGroup != null) buttonGroup.SetActive(false);
     }
 
     public void CloseExitConfirm()
     {
-        exitConfirmPanel.SetActive(false);
-        mainMenuPanel.SetActive(true);
+        if (exitConfirmPanel != null) exitConfirmPanel.SetActive(false);
+        if (logo != null) logo.SetActive(true);
+        if (buttonGroup != null) buttonGroup.SetActive(true);
     }
 
     public void ExitGame()
     {
         Application.Quit();
-        Debug.Log("Quit Game!"); // Only works in builds
+        Debug.Log("Quit Game!"); // Only works in build
     }
 }
