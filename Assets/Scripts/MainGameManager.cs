@@ -16,7 +16,16 @@ public class MainGameManager : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        if (!IsOwner) return;
+        StartCoroutine(WaitForGameState());
+    }
+
+    private System.Collections.IEnumerator WaitForGameState()
+    {
+        // Wait until GameState exists and synced
+        while (GameState.Instance == null || GameState.Instance.turnOrder.Count == 0)
+            yield return null;
+
+        if (!IsOwner) yield break;
 
         LoadMyCharacter();
         ApplyTheme();

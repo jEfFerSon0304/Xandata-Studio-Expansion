@@ -19,6 +19,9 @@ public class DiceManager : NetworkBehaviour
     public GameObject dicePrefab;
     public Transform spawnPoint;
 
+    [SerializeField] private GameObject gameStatePrefab;
+
+
     private readonly Dictionary<ulong, int> results = new();
     private readonly Dictionary<ulong, int> finalRanks = new();
     private readonly Dictionary<ulong, Color> playerColors = new();
@@ -186,40 +189,38 @@ public class DiceManager : NetworkBehaviour
     {
         if (finalRanks.Count == 0)
         {
-            Debug.LogWarning("[DiceManager] finalRanks is empty, nothing to save.");
+            Debug.LogWarning("[DiceManager] No ranks to save.");
             return;
         }
 
-        // Find or create GameState
         GameState gs = FindFirstObjectByType<GameState>();
         if (gs == null)
         {
-            var go = new GameObject("GameState");
-            var netObj = go.AddComponent<NetworkObject>();
-            gs = go.AddComponent<GameState>();
+            if (gameStatePrefab == null)
+            {
+                Debug.LogError("[DiceManager] Missing GameState prefab reference!");
+                return;
+            }
+
+            var go = Instantiate(gameStatePrefab);
+            gs = go.GetComponent<GameState>();
             DontDestroyOnLoad(go);
 
-            if (IsServer && !netObj.IsSpawned)
-                netObj.Spawn(); // ✅ make sure clients get it
-        }
-        else
-        {
-            // If present but not spawned (e.g., created as plain GO), spawn it
-            var netObj = gs.GetComponent<NetworkObject>();
-            if (IsServer && netObj != null && !netObj.IsSpawned)
-                netObj.Spawn();
+            if (IsServer)
+            {
+                var netObj = go.GetComponent<NetworkObject>();
+                if (!netObj.IsSpawned)
+                    netObj.Spawn(true);
+            }
         }
 
-        // ✅ turnOrder is guaranteed non-null now (initialized in GameState)
         gs.turnOrder.Clear();
-        foreach (var kv in finalRanks.OrderBy(k => k.Value))
+        foreach (var kv in finalRanks.OrderBy(x => x.Value))
         {
             gs.turnOrder.Add(kv.Key);
-            Debug.Log($"[DiceManager] Saved Player {kv.Key} -> Rank {kv.Value}");
+            Debug.Log($"[DiceManager] Saved Player {kv.Key} → Rank {kv.Value}");
         }
     }
-
-
 
     private int NextUnusedRankFromTop()
     {

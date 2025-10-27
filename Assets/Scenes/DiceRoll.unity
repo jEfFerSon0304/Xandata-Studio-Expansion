@@ -976,6 +976,7 @@ MonoBehaviour:
   rollButton: {fileID: 1452954627}
   dicePrefab: {fileID: 1141135510818700073, guid: c030f6e527013464089b7b2cc1e4d221, type: 3}
   spawnPoint: {fileID: 339005844}
+  gameStatePrefab: {fileID: 5839767441158290692, guid: 211d336146a0429459c7fe91865d7f72, type: 3}
 --- !u!4 &1151717228
 Transform:
   m_ObjectHideFlags: 0
