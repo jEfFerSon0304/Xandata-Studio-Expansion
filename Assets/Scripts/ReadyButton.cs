@@ -12,7 +12,7 @@ public class ReadyButton : MonoBehaviour
     void Awake()
     {
         button = GetComponent<Button>();
-        button.onClick.AddListener(Click);
+        button.onClick.AddListener(OnClick);
     }
 
     void Start()
@@ -20,17 +20,9 @@ public class ReadyButton : MonoBehaviour
         InvokeRepeating(nameof(UpdateLabel), 0.2f, 0.2f);
     }
 
-    void Click()
+    void OnClick()
     {
         if (PlayerNetwork.LocalPlayer == null) return;
-
-        if (PlayerNetwork.LocalPlayer.State == null)
-        {
-            Debug.Log("State not ready");
-            return;
-        }
-
-        bool ready = PlayerNetwork.LocalPlayer.State.IsReady.Value;
 
         if (NetworkManager.Singleton.IsHost && AllReady())
         {
@@ -38,45 +30,45 @@ public class ReadyButton : MonoBehaviour
             return;
         }
 
-        PlayerNetwork.LocalPlayer.SetReadyServerRpc(!ready);
+        bool newState = !PlayerNetwork.LocalPlayer.IsReady.Value;
+        PlayerNetwork.LocalPlayer.SetReadyServerRpc(newState);
     }
 
     void UpdateLabel()
     {
-        if (PlayerNetwork.LocalPlayer == null)
+        if (!NetworkManager.Singleton.IsConnectedClient || PlayerNetwork.LocalPlayer == null)
         {
             label.text = "Loading...";
             button.interactable = false;
             return;
         }
 
-        if (PlayerNetwork.LocalPlayer.State == null)
-        {
-            label.text = "Syncing...";
-            return; // ✅ remove button disable so UI continues checking
-        }
-
-
-        bool ready = PlayerNetwork.LocalPlayer.State.IsReady.Value;
+        bool ready = PlayerNetwork.LocalPlayer.IsReady.Value;
         bool allReady = AllReady();
         bool isHost = NetworkManager.Singleton.IsHost;
 
         if (isHost && allReady)
         {
             label.text = "Start Game";
+            button.interactable = true;
         }
         else
         {
             label.text = ready ? "Locked" : "Ready";
+            button.interactable = true;
         }
-
-        button.interactable = true;
     }
 
     bool AllReady()
     {
-        var list = FindObjectsByType<PlayerNetwork>(FindObjectsSortMode.None);
-        if (list.Length < 2) return false;
-        return list.All(p => p.State != null && p.State.IsReady.Value);
+#if UNITY_2023_1_OR_NEWER
+        var players = FindObjectsByType<PlayerNetwork>(FindObjectsSortMode.None);
+#else
+        var players = FindObjectsOfType<PlayerNetwork>();
+#endif
+
+        if (players.Length < 2) return false; // require >1 players
+
+        return players.All(p => p.IsReady.Value);
     }
 }

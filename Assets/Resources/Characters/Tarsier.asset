@@ -13,7 +13,23 @@ MonoBehaviour:
   m_Name: Tarsier
   m_EditorClassIdentifier: Assembly-CSharp::CharacterDataSO
   characterName: Tarsier
-  portrait: {fileID: 21300000, guid: 05ddfcd6fa0dd9f489e2996ccd49249b, type: 3}
+  portrait: {fileID: 21300000, guid: 4ed91e768ab1d9046b8f8a9287f4d8ac, type: 3}
+  skills:
+  - skillName: Quick Leap
+    description: Jump 4 tiles forward, even onto an occupied tile.
+    energyCost: 2
+    isUltimate: 0
+    skillIcon: {fileID: 0}
+  - skillName: Coin Snatch
+    description: Steal 2 coins from any chosen player.
+    energyCost: 2
+    isUltimate: 0
+    skillIcon: {fileID: 0}
+  - skillName: Mind Trick
+    description: Swap positions with any player on the board.
+    energyCost: 3
+    isUltimate: 1
+    skillIcon: {fileID: 0}
   themeColor: {r: 1, g: 1, b: 1, a: 1}
-  description: I am Tarsier
+  description: 
   characterPrefab: {fileID: 0}
