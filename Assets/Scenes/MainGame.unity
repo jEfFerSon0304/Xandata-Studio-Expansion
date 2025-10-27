@@ -510,13 +510,13 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 641598717}
-        m_TargetAssemblyTypeName: 
-        m_MethodName: 
+      - m_Target: {fileID: 2261431307456904234}
+        m_TargetAssemblyTypeName: MainGameManager, Assembly-CSharp
+        m_MethodName: EndTurn
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: 
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 
@@ -649,11 +649,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 543702441}
   m_CullTransparentMesh: 1
---- !u!1 &641598717 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 6926779712015113671, guid: f32ff6f0d1d855e4d993bed671cbe287, type: 3}
-  m_PrefabInstance: {fileID: 2261431307456904233}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &698588694
 GameObject:
   m_ObjectHideFlags: 0
@@ -1942,13 +1937,17 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 2048973370}
     - target: {fileID: 617137592221647505, guid: f32ff6f0d1d855e4d993bed671cbe287, type: 3}
+      propertyPath: headerText
+      value: 
+      objectReference: {fileID: 965262656}
+    - target: {fileID: 617137592221647505, guid: f32ff6f0d1d855e4d993bed671cbe287, type: 3}
       propertyPath: feedbackText
       value: 
       objectReference: {fileID: 326364160}
     - target: {fileID: 617137592221647505, guid: f32ff6f0d1d855e4d993bed671cbe287, type: 3}
       propertyPath: endTurnButton
       value: 
-      objectReference: {fileID: 463593099}
+      objectReference: {fileID: 463593101}
     - target: {fileID: 1425407142813880997, guid: f32ff6f0d1d855e4d993bed671cbe287, type: 3}
       propertyPath: GlobalObjectIdHash
       value: 3031126017
@@ -2006,6 +2005,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: f32ff6f0d1d855e4d993bed671cbe287, type: 3}
+--- !u!114 &2261431307456904234 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 617137592221647505, guid: f32ff6f0d1d855e4d993bed671cbe287, type: 3}
+  m_PrefabInstance: {fileID: 2261431307456904233}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 80709004e4a8e1441aacab2391036e3e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MainGameManager
 --- !u!1001 &5206309154056575121
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2098,6 +2108,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: SkillCard_1
       objectReference: {fileID: 0}
+    - target: {fileID: 7652374922074069681, guid: e12d22c7e9f3f0c41a0334b1d51827d7, type: 3}
+      propertyPath: manager
+      value: 
+      objectReference: {fileID: 2261431307456904234}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

@@ -5,8 +5,11 @@ public class DropZone : MonoBehaviour, IDropHandler
 {
     public void OnDrop(PointerEventData eventData)
     {
-        var card = eventData.pointerDrag.GetComponent<SkillCardUI>();
-        if (card != null)
-            card.OnDropzoneUse();
+        var dragged = eventData.pointerDrag?.GetComponent<SkillCardUI>();
+        if (dragged != null)
+        {
+            Debug.Log($"[DropZone] Skill dropped: {dragged.skillData.skillName}");
+            dragged.manager.TryUseSkill(dragged.skillData);
+        }
     }
 }
