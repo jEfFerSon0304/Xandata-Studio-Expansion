@@ -186,29 +186,39 @@ public class DiceManager : NetworkBehaviour
     {
         if (finalRanks.Count == 0)
         {
-            Debug.LogWarning("[DiceManager] finalRanks EMPTY — cannot save turn order!");
+            Debug.LogWarning("[DiceManager] finalRanks is empty, nothing to save.");
             return;
         }
 
+        // Find or create GameState
         GameState gs = FindFirstObjectByType<GameState>();
         if (gs == null)
         {
-            Debug.LogWarning("[DiceManager] GameState not found — creating new instance.");
-            gs = new GameObject("GameState").AddComponent<GameState>();
-            DontDestroyOnLoad(gs.gameObject);
+            var go = new GameObject("GameState");
+            var netObj = go.AddComponent<NetworkObject>();
+            gs = go.AddComponent<GameState>();
+            DontDestroyOnLoad(go);
+
+            if (IsServer && !netObj.IsSpawned)
+                netObj.Spawn(); // ✅ make sure clients get it
+        }
+        else
+        {
+            // If present but not spawned (e.g., created as plain GO), spawn it
+            var netObj = gs.GetComponent<NetworkObject>();
+            if (IsServer && netObj != null && !netObj.IsSpawned)
+                netObj.Spawn();
         }
 
-        if (gs.turnOrder == null)
-            gs.turnOrder = new NetworkList<ulong>();
-
+        // ✅ turnOrder is guaranteed non-null now (initialized in GameState)
         gs.turnOrder.Clear();
-
         foreach (var kv in finalRanks.OrderBy(k => k.Value))
         {
             gs.turnOrder.Add(kv.Key);
-            Debug.Log($"[DiceManager] Saved → Player {kv.Key} Rank {kv.Value}");
+            Debug.Log($"[DiceManager] Saved Player {kv.Key} -> Rank {kv.Value}");
         }
     }
+
 
 
     private int NextUnusedRankFromTop()
