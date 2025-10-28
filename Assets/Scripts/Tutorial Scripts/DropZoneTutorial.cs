@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-public class DropZone : MonoBehaviour, IDropHandler
+public class DropZoneTutorial : MonoBehaviour, IDropHandler
 {
     public DialogueManager dialogueManager;
 
