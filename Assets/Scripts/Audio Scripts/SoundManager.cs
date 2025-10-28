@@ -13,6 +13,8 @@ public class SoundManager : MonoBehaviour
     public AudioClip defaultMusic;
     public AudioClip defaultSFX;
 
+    private Coroutine musicFadeCoroutine; // For volume fading
+
     void Awake()
     {
         // Singleton so it persists across all scenes
@@ -42,12 +44,22 @@ public class SoundManager : MonoBehaviour
         StartCoroutine(FadeOutMusic(fadeDuration));
     }
 
-    // 🔊 Play SFX one-shot (like button, card flip, etc.)
+    // 🔊 Play SFX one-shot
     public void PlaySFX(AudioClip clip)
     {
         if (clip == null) clip = defaultSFX;
         if (clip != null)
             sfxSource.PlayOneShot(clip);
+    }
+
+    // 🎤 Play voice line (dialogue)
+    public void PlayVoiceLine(AudioSource targetSource, AudioClip clip)
+    {
+        if (clip == null || targetSource == null) return;
+        targetSource.Stop(); // stop if playing
+        targetSource.clip = clip;
+        targetSource.loop = false;
+        targetSource.Play();
     }
 
     // 🎚️ Volume Controls
@@ -96,5 +108,29 @@ public class SoundManager : MonoBehaviour
         }
         musicSource.Stop();
         musicSource.volume = startVolume;
+    }
+
+    // 🔊 Smoothly fade music to a target volume (for ducking)
+    public void FadeMusicTo(float targetVolume, float fadeSpeed = 2f)
+    {
+        if (musicFadeCoroutine != null)
+            StopCoroutine(musicFadeCoroutine);
+
+        musicFadeCoroutine = StartCoroutine(FadeMusicVolume(targetVolume, fadeSpeed));
+    }
+
+    private IEnumerator FadeMusicVolume(float targetVolume, float fadeSpeed)
+    {
+        float startVolume = musicSource.volume;
+        float time = 0f;
+
+        while (time < 1f)
+        {
+            time += Time.deltaTime * fadeSpeed;
+            musicSource.volume = Mathf.Lerp(startVolume, targetVolume, time);
+            yield return null;
+        }
+
+        musicSource.volume = targetVolume;
     }
 }

@@ -19,7 +19,7 @@ public class MainMenuUI : MonoBehaviour
     // Called when How To Play button is clicked
     public void OpenHowToPlay()
     {
-        SceneManager.LoadScene("HowToPlay"); // Replace with your scene name
+        SceneManager.LoadScene("HowToPlayScene"); // Replace with your scene name
     }
 
     // Called when Settings button is clicked
