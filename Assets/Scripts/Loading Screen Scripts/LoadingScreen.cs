@@ -1,8 +1,8 @@
 ﻿using TMPro;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.InputSystem; // New Input System support
 
 public class LoadingScreen : MonoBehaviour
 {
@@ -33,7 +33,6 @@ public class LoadingScreen : MonoBehaviour
         loadingBarFill.fillAmount = 0f;
         loadingText.text = "Loading... 0%";
 
-        // Start particle system if assigned
         if (starTrail != null)
             starTrail.Play();
     }
@@ -42,7 +41,7 @@ public class LoadingScreen : MonoBehaviour
     {
         if (isLoading)
         {
-            // Random progress bumps
+            // Simulate loading progress
             if (stutterTimer <= 0f)
             {
                 float randomJump = Random.Range(0.03f, 0.07f);
@@ -54,26 +53,23 @@ public class LoadingScreen : MonoBehaviour
                 stutterTimer -= Time.deltaTime;
             }
 
-            // Smooth progress
             currentProgress = Mathf.Lerp(currentProgress, targetProgress, Time.deltaTime * 4f);
 
             // Update visuals
             loadingBarFill.fillAmount = currentProgress;
             loadingText.text = "Loading... " + Mathf.RoundToInt(currentProgress * 100) + "%";
 
-            // --- Move Star Knob ---
+            // Move the star knob smoothly along the bar
             float barWidth = fillRect.rect.width;
             float filledWidth = barWidth * currentProgress;
             float halfStarWidth = knobRect.rect.width * 0.5f;
             knobRect.anchoredPosition = new Vector2(filledWidth - halfStarWidth + positionOffset, 0);
 
-            // --- Ensure particle trail plays ---
+            // Keep particle trail playing
             if (starTrail != null && !starTrail.isPlaying)
-            {
                 starTrail.Play();
-            }
 
-            // --- Loading complete ---
+            // Finish loading
             if (currentProgress >= 0.995f)
             {
                 isLoading = false;
@@ -82,9 +78,24 @@ public class LoadingScreen : MonoBehaviour
         }
         else
         {
-            // Tap-to-continue for mobile and editor
-            if (Mouse.current.leftButton.wasPressedThisFrame ||
-                (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasPressedThisFrame))
+            // ✅ Works on both PC (mouse) and Android (touch)
+            bool tapped = false;
+
+            // Touch input (Android)
+            if (Touchscreen.current != null &&
+                Touchscreen.current.primaryTouch.press.wasPressedThisFrame)
+            {
+                tapped = true;
+            }
+
+            // Mouse input (Editor/PC)
+            if (Mouse.current != null &&
+                Mouse.current.leftButton.wasPressedThisFrame)
+            {
+                tapped = true;
+            }
+
+            if (tapped)
             {
                 SceneManager.LoadScene(nextSceneName);
             }
