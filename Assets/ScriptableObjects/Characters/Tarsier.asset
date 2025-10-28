@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f9a71e7f818ea242ac5caf1f6bf98ab, type: 3}
+  m_Name: Tarsier
+  m_EditorClassIdentifier: Assembly-CSharp::CharacterDataSO
+  characterName: Tarsier
+  portrait: {fileID: 21300000, guid: 05ddfcd6fa0dd9f489e2996ccd49249b, type: 3}
+  skills:
+  - skillName: Quick Leap
+    description: Jump 4 tiles forward, even onto an occupied tile.
+    energyCost: 2
+    isUltimate: 0
+  - skillName: Coin Snatch
+    description: Steal 2 coins from any chosen player.
+    energyCost: 2
+    isUltimate: 0
+  - skillName: Mind Trick
+    description: Swap positions with any player on the board.
+    energyCost: 3
+    isUltimate: 1
+  themeColor: {r: 1, g: 1, b: 1, a: 1}
+  description: 
+  characterPrefab: {fileID: 0}
