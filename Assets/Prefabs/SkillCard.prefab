@@ -316,18 +316,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b57390c16271b404aa2beece7822d57b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SkillCardUI
-  icon: {fileID: 2535919237654558544}
   nameText: {fileID: 4500529497026958196}
-  descText: {fileID: 16096508336487549}
   costText: {fileID: 6928421099111601914}
-  flipButton: {fileID: 2347011031843224961}
-  skill:
+  descText: {fileID: 16096508336487549}
+  icon: {fileID: 2535919237654558544}
+  frontSide: {fileID: 1649683931980007544}
+  backSide: {fileID: 8485262645928179149}
+  manager: {fileID: 0}
+  skillData:
     skillName: 
     description: 
     energyCost: 0
     isUltimate: 0
     skillIcon: {fileID: 0}
-  manager: {fileID: 0}
 --- !u!114 &2347011031843224961
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -601,7 +602,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &60056124511255267
 RectTransform:
   m_ObjectHideFlags: 0

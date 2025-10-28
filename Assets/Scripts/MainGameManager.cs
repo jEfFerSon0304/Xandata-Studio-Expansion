@@ -25,7 +25,7 @@ public class MainGameManager : NetworkBehaviour
 
     private IEnumerator InitializeWhenReady()
     {
-        // Wait for all critical systems to sync across network
+        // Wait for all systems to be ready across network
         while (GameDatabase.Instance == null ||
                PlayerNetwork.LocalPlayer == null ||
                PlayerNetwork.LocalPlayer.SelectedCharacterIndex.Value < 0 ||
@@ -34,7 +34,7 @@ public class MainGameManager : NetworkBehaviour
             yield return null;
         }
 
-        // ✅ Now safe to continue
+        // ✅ Safe to continue
         LoadMyCharacter();
         ApplyTheme();
         SpawnSkillCards();
@@ -83,8 +83,13 @@ public class MainGameManager : NetworkBehaviour
             : "Waiting for your turn...";
 
         energyText.text = $"Energy: {energy}/5";
-        endTurnButton.gameObject.SetActive(myTurn);
+        endTurnButton.interactable = myTurn;
+        endTurnButton.gameObject.SetActive(true);
     }
+
+    // ============================================================
+    // 🪄 SKILL USAGE
+    // ============================================================
 
     public void TryUseSkill(CharacterDataSO.SkillData skill)
     {
@@ -105,25 +110,81 @@ public class MainGameManager : NetworkBehaviour
         UpdateUI();
     }
 
+    // ============================================================
+    // 🕹️ END TURN SYSTEM (WORKS FOR BOTH HOST & CLIENT)
+    // ============================================================
+
     public void EndTurn()
     {
-        if (!IsServer) return;
+        if (!IsServer)
+        {
+            // 🧠 If not host, ask the server to handle it
+            RequestEndTurnServerRpc();
+            return;
+        }
 
+        // 🧠 Host directly handles the logic
+        HandleNextTurn();
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    void RequestEndTurnServerRpc(ServerRpcParams rpcParams = default)
+    {
+        ulong senderId = rpcParams.Receive.SenderClientId;
+
+        if (GameState.Instance == null)
+            return;
+
+        // ✅ Only allow the player whose turn it is
+        if (GameState.Instance.CurrentPlayerId != senderId)
+        {
+            SendFeedbackClientRpc(senderId, "⛔ You can’t end another player’s turn!");
+            return;
+        }
+
+        HandleNextTurn();
+    }
+
+    private void HandleNextTurn()
+    {
         var gs = GameState.Instance;
         if (gs == null || gs.turnOrder.Count == 0)
             return;
 
-        // Advance turn index
+        // ✅ Advance to next turn
         gs.currentTurnIndex.Value = (gs.currentTurnIndex.Value + 1) % gs.turnOrder.Count;
 
-        // Restore host energy every new round cycle
+        // ✅ Full round completed? Restore energy to everyone!
         if (gs.currentTurnIndex.Value == 0)
-            energy = Mathf.Min(5, energy + 1);
+        {
+            foreach (var clientId in gs.turnOrder)
+            {
+                RestoreEnergyClientRpc(clientId);
+            }
+        }
 
         Debug.Log($"[Turn] Next player: {gs.CurrentPlayerId}");
+
+        // 🔄 Update everyone’s UI
         UpdateAllClientsUIClientRpc();
     }
 
+    // ============================================================
+    // 🔁 CLIENTRPC UPDATES
+    // ============================================================
+
+    [ClientRpc]
+    void RestoreEnergyClientRpc(ulong targetClientId)
+    {
+        // ✅ Only affects intended client
+        if (NetworkManager.Singleton.LocalClientId == targetClientId)
+        {
+            energy = Mathf.Min(5, energy + 1);
+            energyText.text = $"Energy: {energy}/5";
+            feedbackText.text = "⚡ +1 Energy!";
+            Debug.Log($"[Energy] +1 Energy for Player {targetClientId}");
+        }
+    }
 
     [ClientRpc]
     void UpdateAllClientsUIClientRpc()
@@ -137,9 +198,15 @@ public class MainGameManager : NetworkBehaviour
             ? $"{myCharacter.characterName}'s Turn!"
             : "Waiting for your turn...";
 
-        endTurnButton.gameObject.SetActive(myTurn);
+        endTurnButton.interactable = myTurn;
     }
 
+    [ClientRpc]
+    void SendFeedbackClientRpc(ulong targetClientId, string message)
+    {
+        if (NetworkManager.Singleton.LocalClientId == targetClientId)
+            feedbackText.text = message;
+    }
 
     void Update()
     {
