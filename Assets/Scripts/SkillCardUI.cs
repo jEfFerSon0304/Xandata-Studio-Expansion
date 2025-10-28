@@ -3,6 +3,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using TMPro;
 using Unity.Netcode;
+using System.Collections;
 
 public class SkillCardUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerClickHandler
 {
@@ -56,19 +57,50 @@ public class SkillCardUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
         ShowFront();
     }
 
-    // ----------------------------
-    // 🪄 Flip Logic
-    // ----------------------------
+    // ------------------------------------------------
+    // 🪄 Realistic Flip Animation
+    // ------------------------------------------------
     public void OnPointerClick(PointerEventData eventData)
     {
-        FlipCard();
+        if (!isDragging)
+            StartCoroutine(FlipCardAnimation());
     }
 
-    private void FlipCard()
+    IEnumerator FlipCardAnimation()
     {
+        float duration = 0.3f;
+        float halfDuration = duration / 2f;
+        float elapsed = 0f;
+
+        Vector3 startRotation = rectTransform.localEulerAngles;
+        Vector3 endRotation = startRotation + new Vector3(0, 180f, 0);
+
+        // 🌀 First half: rotate to edge
+        while (elapsed < halfDuration)
+        {
+            float angle = Mathf.Lerp(0, 90, elapsed / halfDuration);
+            rectTransform.localEulerAngles = new Vector3(0, angle, 0);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        // 🔁 Switch sides at the halfway point
         isFlipped = !isFlipped;
         frontSide.SetActive(!isFlipped);
         backSide.SetActive(isFlipped);
+
+        // 🌀 Second half: complete rotation
+        elapsed = 0f;
+        while (elapsed < halfDuration)
+        {
+            float angle = Mathf.Lerp(90, 180, elapsed / halfDuration);
+            rectTransform.localEulerAngles = new Vector3(0, angle, 0);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        // ✅ Reset rotation (avoid cumulative rotation)
+        rectTransform.localEulerAngles = Vector3.zero;
     }
 
     private void ShowFront()
@@ -76,21 +108,20 @@ public class SkillCardUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
         frontSide.SetActive(true);
         backSide.SetActive(false);
         isFlipped = false;
+        rectTransform.localEulerAngles = Vector3.zero;
     }
 
-    // ----------------------------
-    // 🖱️ Drag Logic
-    // ----------------------------
+    // ------------------------------------------------
+    // 🖱️ Drag Logic (unchanged, but stable)
+    // ------------------------------------------------
     public void OnBeginDrag(PointerEventData eventData)
     {
         startPos = rectTransform.anchoredPosition;
         originalParent = transform.parent;
 
-        // 🧩 Disable layout group so cards don't shift
         if (layoutGroup != null)
             layoutGroup.enabled = false;
 
-        // 🧩 Move card to top-level canvas so it stays visible
         transform.SetParent(mainCanvas.transform, true);
 
         if (canvasGroup != null)
@@ -118,7 +149,6 @@ public class SkillCardUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
         transform.SetParent(originalParent, true);
         rectTransform.anchoredPosition = startPos;
 
-        // ✅ Re-enable layout group
         if (layoutGroup != null)
             layoutGroup.enabled = true;
 
