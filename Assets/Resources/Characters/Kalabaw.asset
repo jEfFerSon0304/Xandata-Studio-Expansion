@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Kalabaw
   m_EditorClassIdentifier: Assembly-CSharp::CharacterDataSO
   characterName: Kalabaw
-  portrait: {fileID: 21300000, guid: bfcd84e4eb5bc2342a4dfbc62852560e, type: 3}
+  portrait: {fileID: 21300000, guid: 6c6412fcd5e095b4c802b97cb83813da, type: 3}
   skills:
   - skillName: Heavy Charge
     description: Move 4 tiles forward and ignore any obstacle you pass.
