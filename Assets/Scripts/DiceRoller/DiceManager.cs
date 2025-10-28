@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
@@ -19,8 +20,12 @@ public class DiceManager : NetworkBehaviour
     public GameObject dicePrefab;
     public Transform spawnPoint;
 
-    [SerializeField] private GameObject gameStatePrefab;
+    [Header("Popups & Navigation")]
+    public Button continueButton;
+    public GameObject orderPopup;
+    public CanvasGroup orderPopupGroup;
 
+    [SerializeField] private GameObject gameStatePrefab;
 
     private readonly Dictionary<ulong, int> results = new();
     private readonly Dictionary<ulong, int> finalRanks = new();
@@ -71,9 +76,7 @@ public class DiceManager : NetworkBehaviour
     private HashSet<ulong> GetExpectedRollers()
     {
         if (tieBand.Count > 0) return new HashSet<ulong>(tieBand);
-
-        return new HashSet<ulong>(
-            NetworkManager.Singleton.ConnectedClientsIds.Where(id => !finalRanks.ContainsKey(id)));
+        return new HashSet<ulong>(NetworkManager.Singleton.ConnectedClientsIds.Where(id => !finalRanks.ContainsKey(id)));
     }
 
     private void OnHostRollPressed()
@@ -103,12 +106,9 @@ public class DiceManager : NetworkBehaviour
         PushSyncToAll();
 
         if (expected.All(results.ContainsKey))
-        {
             EvaluateRound(expected);
-        }
 
         PushSyncToAll();
-        UpdateLocalUI();
     }
 
     private void EvaluateRound(HashSet<ulong> expected)
@@ -166,14 +166,53 @@ public class DiceManager : NetworkBehaviour
     {
         tieBand.Clear();
         PushSyncToAll();
-        StartCoroutine(StartMainGame());
+
+        // 🟩 Tell all clients to show the popup too
+        ShowResultsPopupClientRpc();
+
+        if (IsServer && continueButton != null)
+        {
+            continueButton.gameObject.SetActive(true);
+            continueButton.onClick.RemoveAllListeners();
+            continueButton.onClick.AddListener(() =>
+            {
+                Debug.Log("[DiceManager] Host clicked Continue — loading MainGame...");
+                StartCoroutine(StartMainGame());
+            });
+        }
     }
 
-    private System.Collections.IEnumerator StartMainGame()
+    [ClientRpc]
+    private void ShowResultsPopupClientRpc()
     {
-        yield return new WaitForEndOfFrame();
+        if (orderPopup != null && orderPopupGroup != null)
+        {
+            orderPopup.SetActive(true);
+            StartCoroutine(FadeInOrderPopup());
+        }
+
+        // 🧠 All clients update their UI after popup appears
+        UpdateLocalUI();
+    }
+
+    IEnumerator FadeInOrderPopup()
+    {
+        orderPopupGroup.alpha = 0;
+        float t = 0;
+        while (t < 1f)
+        {
+            t += Time.deltaTime * 2f;
+            orderPopupGroup.alpha = Mathf.Lerp(0, 1, t);
+            yield return null;
+        }
+    }
+
+    private IEnumerator StartMainGame()
+    {
+        yield return new WaitForSeconds(1f);
         CleanupDice();
         SaveTurnOrderToGameState();
+
         if (IsServer)
             NetworkManager.Singleton.SceneManager.LoadScene("MainGame", LoadSceneMode.Single);
     }
@@ -287,6 +326,7 @@ public class DiceManager : NetworkBehaviour
             }
         }
 
+        // 🧩 Refresh UI on every client after receiving sync
         UpdateLocalUI();
     }
 
@@ -304,16 +344,54 @@ public class DiceManager : NetworkBehaviour
                 ? ("Locked Rank: " + rank + "\n")
                 : (GetExpectedRollers().Contains(me) ? "Rolling...\n" : "Waiting...\n"));
 
-
         if (finalRanks.Count > 0)
         {
-            orderText.text = string.Join("\n",
-                finalRanks.OrderBy(k => k.Value)
-                .Select(k => $"Rank {k.Value}: Player {k.Key} ({ColorToName(playerColors[k.Key])})"));
+            var ordered = finalRanks.OrderBy(kvp => kvp.Value).ToList();
+
+            var lines = ordered.Select((kvp, index) =>
+            {
+                int rankValue = kvp.Value;
+                string suffix = GetRankSuffix(rankValue);
+                int playerNumberShown = index + 1;
+                ulong clientId = kvp.Key;
+
+                Color color = playerColors.ContainsKey(clientId) ? playerColors[clientId] : Color.white;
+                string colorHex = ColorUtility.ToHtmlStringRGB(color);
+
+                string charName = "Unknown";
+                if (GameDatabase.Instance != null)
+                {
+                    var data = GameDatabase.Instance.GetCharacterData(clientId);
+                    if (data != null && !string.IsNullOrEmpty(data.characterName))
+                        charName = data.characterName;
+                }
+
+                string colorName = ColorToName(color);
+
+                // Gold rank + player line in their color 🎨
+                return $"<color=#FFD700>{rankValue}{suffix}</color> - <color=#{colorHex}>Player {playerNumberShown} {charName} [{colorName}]</color>";
+            });
+
+            orderText.text = string.Join("\n", lines);
         }
-        else orderText.text = "";
+        else
+        {
+            orderText.text = "";
+        }
 
         rollButton.gameObject.SetActive(IsServer);
+    }
+
+    private static string GetRankSuffix(int rank)
+    {
+        int mod100 = rank % 100;
+        if (mod100 == 11 || mod100 == 12 || mod100 == 13)
+            return "th";
+
+        int mod10 = rank % 10;
+        return mod10 == 1 ? "st" :
+               mod10 == 2 ? "nd" :
+               mod10 == 3 ? "rd" : "th";
     }
 
     private static string ColorToName(Color c) =>

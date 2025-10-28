@@ -11,15 +11,24 @@ public class TargetSelectionUI : MonoBehaviour
     public Transform targetListParent;      // container for generated buttons
     public TMP_Text titleText;              // title text e.g. "Select Target"
     public GameObject panelRoot;            // main background panel (Image)
+    public Button cancelButton; // 👈 NEW
 
     private MainGameManager manager;
     private CharacterDataSO.SkillData pendingSkill;
 
     private void Awake()
     {
-        // Hide on start
         if (panelRoot != null)
             panelRoot.SetActive(false);
+
+        if (cancelButton != null)
+            cancelButton.onClick.AddListener(OnCancelClicked); // 👈 NEW
+    }
+
+    private void OnCancelClicked()
+    {
+        Debug.Log("[TargetUI] Player canceled target selection.");
+        Close();
     }
 
     /// <summary>
