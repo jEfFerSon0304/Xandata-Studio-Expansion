@@ -13,7 +13,7 @@ public class MainMenuUI : MonoBehaviour
     // Called when Start Game button is clicked
     public void StartGame()
     {
-        SceneManager.LoadScene("GameScene"); // Replace with your gameplay scene name
+        SceneManager.LoadScene("StartGame"); // Replace with your gameplay scene name
     }
 
     // Called when How To Play button is clicked
