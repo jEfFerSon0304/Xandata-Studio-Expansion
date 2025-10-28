@@ -14,6 +14,10 @@ public class MainGameManager : NetworkBehaviour
     public GameObject skillCardPrefab;
     public Button endTurnButton;
 
+    [Header("Popups & Targeting")]
+    public TargetSelectionUI targetSelectionUI;
+    public GameObject attackPopupPrefab;
+
     private CharacterDataSO myCharacter;
     private int energy = 5;
     private bool initialized = false;
@@ -21,20 +25,26 @@ public class MainGameManager : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         StartCoroutine(InitializeWhenReady());
+
+        if (!IsOwner)
+            return;
+
     }
 
     private IEnumerator InitializeWhenReady()
     {
-        // Wait for all systems to be ready across network
         while (GameDatabase.Instance == null ||
                PlayerNetwork.LocalPlayer == null ||
                PlayerNetwork.LocalPlayer.SelectedCharacterIndex.Value < 0 ||
-               GameState.Instance == null)
+               GameState.Instance == null ||
+               GameState.Instance.turnOrder.Count == 0)
         {
             yield return null;
         }
 
-        // ✅ Safe to continue
+        // wait an extra frame to ensure network variables are synced
+        yield return new WaitForSeconds(0.2f);
+
         LoadMyCharacter();
         ApplyTheme();
         SpawnSkillCards();
@@ -43,6 +53,7 @@ public class MainGameManager : NetworkBehaviour
         initialized = true;
         Debug.Log($"[MainGame] Initialized for player {NetworkManager.Singleton.LocalClientId}");
     }
+
 
     void LoadMyCharacter()
     {
@@ -84,46 +95,119 @@ public class MainGameManager : NetworkBehaviour
 
         energyText.text = $"Energy: {energy}/5";
         endTurnButton.interactable = myTurn;
-        endTurnButton.gameObject.SetActive(true);
     }
 
     // ============================================================
     // 🪄 SKILL USAGE
     // ============================================================
-
     public void TryUseSkill(CharacterDataSO.SkillData skill)
     {
-        if (GameState.Instance.CurrentPlayerId != NetworkManager.Singleton.LocalClientId)
-        {
-            feedbackText.text = "⛔ Not your turn!";
-            return;
-        }
+        Debug.Log($"[Skill] Trying to use: {skill.skillName} | Requires target: {skill.requiresTarget}");
 
+        // ⚡ Energy check
         if (skill.energyCost > energy)
         {
             feedbackText.text = "⚡ Not enough energy!";
             return;
         }
 
+        // 🎯 If requires target → open popup (local only!)
+        if (skill.requiresTarget)
+        {
+            // ✅ Activate TargetSelectionUI only when needed
+            targetSelectionUI.gameObject.SetActive(true);
+
+            if (!IsOwner)
+            {
+                Debug.Log("[Skill] Not owner, opening TargetSelectionUI locally only.");
+                targetSelectionUI.Open(this, skill);
+                return;
+            }
+
+            targetSelectionUI.Open(this, skill);
+            return;
+        }
+
+        // ⚡ Otherwise execute immediately
+        ExecuteSkill(skill, ulong.MaxValue);
+    }
+
+
+
+
+    public void OnTargetSelected(CharacterDataSO.SkillData skill, ulong targetClientId)
+    {
         energy -= skill.energyCost;
-        feedbackText.text = $"✅ {skill.skillName} Activated!";
         UpdateUI();
+
+        RequestSkillUseServerRpc(skill.skillName, targetClientId);
+    }
+
+    public void ExecuteSkill(CharacterDataSO.SkillData skill, ulong targetClientId)
+    {
+        energy -= skill.energyCost;
+        UpdateUI();
+
+        RequestSkillUseServerRpc(skill.skillName, targetClientId);
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    void RequestSkillUseServerRpc(string skillName, ulong targetClientId, ServerRpcParams rpcParams = default)
+    {
+        ulong senderId = rpcParams.Receive.SenderClientId;
+        string attackerName = GameDatabase.Instance.GetCharacterName(senderId);
+
+        // 💬 Notify target
+        if (targetClientId != ulong.MaxValue)
+            NotifyAttackClientRpc(targetClientId, attackerName, skillName);
+
+        // 🧠 Special case: Carabao Ground Slam (stun)
+        if (skillName == "Ground Slam" && targetClientId != ulong.MaxValue)
+        {
+            var target = FindPlayerNetwork(targetClientId);
+            if (target != null)
+            {
+                target.isStunned.Value = true;
+                Debug.Log($"[Effect] Player {targetClientId} stunned by Ground Slam!");
+            }
+        }
+    }
+
+    [ClientRpc]
+    void NotifyAttackClientRpc(ulong targetClientId, string attackerName, string skillName)
+    {
+        if (NetworkManager.Singleton.LocalClientId == targetClientId)
+        {
+            feedbackText.text = $"💥 {attackerName} used {skillName} on you!";
+
+            if (attackPopupPrefab != null)
+            {
+                var popup = Instantiate(attackPopupPrefab, transform);
+                popup.GetComponentInChildren<TMP_Text>().text = $"{attackerName} attacked with {skillName}!";
+                Destroy(popup, 3f);
+            }
+        }
+    }
+
+    private PlayerNetwork FindPlayerNetwork(ulong clientId)
+    {
+        foreach (var pn in FindObjectsByType<PlayerNetwork>(FindObjectsSortMode.None))
+            if (pn.OwnerClientId == clientId)
+                return pn;
+        return null;
     }
 
     // ============================================================
-    // 🕹️ END TURN SYSTEM (WORKS FOR BOTH HOST & CLIENT)
+    // 🕹️ END TURN SYSTEM
     // ============================================================
-
     public void EndTurn()
     {
         if (!IsServer)
         {
-            // 🧠 If not host, ask the server to handle it
             RequestEndTurnServerRpc();
             return;
         }
 
-        // 🧠 Host directly handles the logic
         HandleNextTurn();
     }
 
@@ -131,14 +215,9 @@ public class MainGameManager : NetworkBehaviour
     void RequestEndTurnServerRpc(ServerRpcParams rpcParams = default)
     {
         ulong senderId = rpcParams.Receive.SenderClientId;
-
-        if (GameState.Instance == null)
-            return;
-
-        // ✅ Only allow the player whose turn it is
         if (GameState.Instance.CurrentPlayerId != senderId)
         {
-            SendFeedbackClientRpc(senderId, "⛔ You can’t end another player’s turn!");
+            SendFeedbackClientRpc(senderId, "⛔ Not your turn!");
             return;
         }
 
@@ -151,38 +230,26 @@ public class MainGameManager : NetworkBehaviour
         if (gs == null || gs.turnOrder.Count == 0)
             return;
 
-        // ✅ Advance to next turn
-        gs.currentTurnIndex.Value = (gs.currentTurnIndex.Value + 1) % gs.turnOrder.Count;
+        gs.AdvanceTurn(); // ✅ skip stunned logic handled here
 
-        // ✅ Full round completed? Restore energy to everyone!
+        // ✅ Full round = +1 energy for everyone
         if (gs.currentTurnIndex.Value == 0)
         {
             foreach (var clientId in gs.turnOrder)
-            {
                 RestoreEnergyClientRpc(clientId);
-            }
         }
 
-        Debug.Log($"[Turn] Next player: {gs.CurrentPlayerId}");
-
-        // 🔄 Update everyone’s UI
         UpdateAllClientsUIClientRpc();
     }
-
-    // ============================================================
-    // 🔁 CLIENTRPC UPDATES
-    // ============================================================
 
     [ClientRpc]
     void RestoreEnergyClientRpc(ulong targetClientId)
     {
-        // ✅ Only affects intended client
         if (NetworkManager.Singleton.LocalClientId == targetClientId)
         {
             energy = Mathf.Min(5, energy + 1);
             energyText.text = $"Energy: {energy}/5";
             feedbackText.text = "⚡ +1 Energy!";
-            Debug.Log($"[Energy] +1 Energy for Player {targetClientId}");
         }
     }
 

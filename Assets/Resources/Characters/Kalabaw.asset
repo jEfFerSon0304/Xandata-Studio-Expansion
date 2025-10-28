@@ -20,17 +20,20 @@ MonoBehaviour:
     energyCost: 2
     isUltimate: 0
     skillIcon: {fileID: 0}
+    requiresTarget: 0
   - skillName: Ground Slam
     description: "Choose one player \u2014 they skip their next turn (stunned)."
     energyCost: 2
     isUltimate: 0
     skillIcon: {fileID: 0}
+    requiresTarget: 1
   - skillName: Stampede
     description: "Rush 6 tiles forward, knocking away any player you pass \u2014
       they move 3 tiles backward."
     energyCost: 3
     isUltimate: 1
     skillIcon: {fileID: 0}
+    requiresTarget: 0
   themeColor: {r: 1, g: 1, b: 1, a: 1}
   description: 
   characterPrefab: {fileID: 0}

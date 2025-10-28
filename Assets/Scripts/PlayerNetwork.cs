@@ -7,6 +7,10 @@ public class PlayerNetwork : NetworkBehaviour
 {
     public static PlayerNetwork LocalPlayer;
 
+    [Header("Local UI Prefab")]
+    [Tooltip("Assign the MainGameManager prefab here (non-networked)")]
+    public GameObject mainGameUIPrefab;
+
     public NetworkVariable<int> SlotIndex =
         new(-1, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
@@ -16,12 +20,38 @@ public class PlayerNetwork : NetworkBehaviour
     public NetworkVariable<bool> IsReady =
         new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
+    public NetworkVariable<bool> isStunned =
+        new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    private GameObject localUIInstance; // store reference to spawned UI
+
+    public GameObject gameStatePrefab; // 👈 assign in Inspector (Server prefab)
+
+
     void Awake() => DontDestroyOnLoad(gameObject);
 
     public override void OnNetworkSpawn()
     {
         if (IsOwner)
+        {
             LocalPlayer = this;
+
+            // Spawn MainGame UI (already existing code)
+            if (mainGameUIPrefab != null)
+            {
+                Debug.Log($"[UI] Spawning local MainGameManager UI for player {OwnerClientId}");
+                localUIInstance = Instantiate(mainGameUIPrefab);
+                localUIInstance.name = $"MainGameUI_{OwnerClientId}";
+            }
+        }
+
+        // ✅ SERVER ONLY: Spawn the GameState if it doesn't exist yet
+        if (IsServer && GameState.Instance == null)
+        {
+            var gs = Instantiate(gameStatePrefab);
+            gs.GetComponent<NetworkObject>().Spawn(true);
+            Debug.Log("[Server] Spawned GameState network object.");
+        }
 
         if (IsServer)
             StartCoroutine(AssignSlotAndCharacter());
@@ -41,11 +71,26 @@ public class PlayerNetwork : NetworkBehaviour
         if (SelectedCharacterIndex.Value < 0)
             SelectedCharacterIndex.Value = SlotIndex.Value % db.allCharacters.Length;
 
-        IsReady.Value = false; // ✅ Always unlocked on lobby load
+        // ✅ Register character assignment in the shared GameDatabase
+        // After registering character
+        GameDatabase.Instance.SetCharacter(OwnerClientId, SelectedCharacterIndex.Value);
+        UpdateCharacterClientRpc(OwnerClientId, SelectedCharacterIndex.Value);
 
+        SyncCharacterToClientsClientRpc(OwnerClientId, SelectedCharacterIndex.Value);
+
+
+        IsReady.Value = false;
         Debug.Log($"[ASSIGN] Player {OwnerClientId} | Slot {SlotIndex.Value} | Character {SelectedCharacterIndex.Value}");
         PlayerNetwork.NotifyUpdate();
     }
+
+    [ClientRpc]
+    void UpdateCharacterClientRpc(ulong clientId, int charIndex)
+    {
+        if (GameDatabase.Instance != null)
+            GameDatabase.Instance.SetCharacter(clientId, charIndex);
+    }
+
 
     public static void NotifyUpdate() =>
         OnAnyStateChanged?.Invoke();
@@ -55,7 +100,7 @@ public class PlayerNetwork : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     public void SetCharacterIndexServerRpc(int index)
     {
-        if (!IsReady.Value) // ✅ Block change when locked
+        if (!IsReady.Value)
             SelectedCharacterIndex.Value = index;
     }
 
@@ -67,5 +112,25 @@ public class PlayerNetwork : NetworkBehaviour
 
         IsReady.Value = ready;
         NotifyUpdate();
+    }
+
+    private void OnDestroy()
+    {
+        // 🧹 Cleanup local UI if player disconnects
+        if (IsOwner && localUIInstance != null)
+        {
+            Destroy(localUIInstance);
+            localUIInstance = null;
+        }
+    }
+
+    [ClientRpc]
+    void SyncCharacterToClientsClientRpc(ulong clientId, int characterIndex)
+    {
+        if (GameDatabase.Instance != null)
+        {
+            GameDatabase.Instance.SetCharacter(clientId, characterIndex);
+            Debug.Log($"[Sync] Client received character {characterIndex} for player {clientId}");
+        }
     }
 }

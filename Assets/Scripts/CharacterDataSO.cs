@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 [CreateAssetMenu(fileName = "CharacterData", menuName = "Game/Character Data")]
 public class CharacterDataSO : ScriptableObject
@@ -8,7 +8,6 @@ public class CharacterDataSO : ScriptableObject
     public Sprite portrait;
     public SkillData[] skills; // 3 skills
     public Color themeColor = Color.white;
-
 
     [Header("Description")]
     [TextArea]
@@ -20,13 +19,16 @@ public class CharacterDataSO : ScriptableObject
     [System.Serializable]
     public class SkillData
     {
+        [Header("Basic Info")]
         public string skillName;
-        public string description;
+        [TextArea] public string description;
         public int energyCost;
         public bool isUltimate;
 
         [Header("Visual")]
         public Sprite skillIcon;
-    }
 
+        [Header("Target Settings")]
+        public bool requiresTarget; // ✅ NEW FIELD — Does this skill need a target?
+    }
 }

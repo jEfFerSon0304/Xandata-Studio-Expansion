@@ -19,14 +19,20 @@ MonoBehaviour:
     description: Jump 4 tiles forward, even onto an occupied tile.
     energyCost: 2
     isUltimate: 0
+    skillIcon: {fileID: 0}
+    requiresTarget: 0
   - skillName: Coin Snatch
     description: Steal 2 coins from any chosen player.
     energyCost: 2
     isUltimate: 0
+    skillIcon: {fileID: 0}
+    requiresTarget: 1
   - skillName: Mind Trick
     description: Swap positions with any player on the board.
     energyCost: 3
     isUltimate: 1
+    skillIcon: {fileID: 0}
+    requiresTarget: 1
   themeColor: {r: 1, g: 1, b: 1, a: 1}
   description: 
   characterPrefab: {fileID: 0}

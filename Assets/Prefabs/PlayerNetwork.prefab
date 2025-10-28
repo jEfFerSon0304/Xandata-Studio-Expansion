@@ -71,9 +71,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerNetwork
   ShowTopMostFoldoutHeaderGroup: 1
+  mainGameUIPrefab: {fileID: 6926779712015113671, guid: f32ff6f0d1d855e4d993bed671cbe287, type: 3}
   SlotIndex:
     m_InternalValue: -1
   SelectedCharacterIndex:
     m_InternalValue: -1
   IsReady:
     m_InternalValue: 0
+  isStunned:
+    m_InternalValue: 0
+  gameStatePrefab: {fileID: 5839767441158290692, guid: 211d336146a0429459c7fe91865d7f72, type: 3}

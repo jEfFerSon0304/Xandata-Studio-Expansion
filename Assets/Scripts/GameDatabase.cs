@@ -43,9 +43,11 @@ public class GameDatabase : MonoBehaviour
                 return allCharacters[index];
         }
 
-        Debug.LogWarning($"[GameDatabase] No character assigned for player {clientId}");
+        // Prevent warning spam by ignoring uninitialized players
+        // Debug.LogWarning($"[GameDatabase] No character assigned for player {clientId}");
         return null;
     }
+
 
     /// <summary>
     /// Helper: get character name

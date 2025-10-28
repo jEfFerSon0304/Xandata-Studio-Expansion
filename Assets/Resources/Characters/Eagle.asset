@@ -20,16 +20,19 @@ MonoBehaviour:
     energyCost: 2
     isUltimate: 0
     skillIcon: {fileID: 0}
+    requiresTarget: 0
   - skillName: Gust of Wind
     description: Choose one player and push them back 3 tiles.
     energyCost: 2
     isUltimate: 0
     skillIcon: {fileID: 0}
+    requiresTarget: 1
   - skillName: Sky Soar
     description: Teleport up to 10 tiles ahead to any visible tile on the board.
     energyCost: 3
     isUltimate: 1
     skillIcon: {fileID: 0}
+    requiresTarget: 0
   themeColor: {r: 1, g: 1, b: 1, a: 1}
   description: 
   characterPrefab: {fileID: 0}

@@ -20,18 +20,21 @@ MonoBehaviour:
     energyCost: 2
     isUltimate: 0
     skillIcon: {fileID: 0}
+    requiresTarget: 0
   - skillName: Bubble Trap
     description: "Choose one player \u2014 they can\u2019t use any powerups on their
       next turn."
     energyCost: 2
     isUltimate: 0
     skillIcon: {fileID: 0}
+    requiresTarget: 1
   - skillName: Tidal Reversal
     description: Swim 5 tiles forward. Reverse the movement direction of all opponents
       for one full round (they move backward on their next roll)
     energyCost: 3
     isUltimate: 1
     skillIcon: {fileID: 0}
+    requiresTarget: 0
   themeColor: {r: 1, g: 1, b: 1, a: 1}
   description: 
   characterPrefab: {fileID: 0}
