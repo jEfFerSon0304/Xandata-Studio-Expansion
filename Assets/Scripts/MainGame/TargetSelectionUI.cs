@@ -12,6 +12,7 @@ public class TargetSelectionUI : MonoBehaviour
     public TMP_Text titleText;              // title text e.g. "Select Target"
     public GameObject panelRoot;            // main background panel (Image)
     public Button cancelButton; // 👈 NEW
+    public TargetSelectionUI targetSelectionUI;
 
     private MainGameManager manager;
     private CharacterDataSO.SkillData pendingSkill;
@@ -135,6 +136,7 @@ public class TargetSelectionUI : MonoBehaviour
 
         // ✅ Also hide the whole object
         gameObject.SetActive(false);
+        targetSelectionUI.gameObject.SetActive(false);
     }
 
 }

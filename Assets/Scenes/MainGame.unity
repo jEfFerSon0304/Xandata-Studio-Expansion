@@ -464,7 +464,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 100, y: 50}
-  m_SizeDelta: {x: 200, y: 50}
+  m_SizeDelta: {x: 492.03, y: 150}
   m_Pivot: {x: 0, y: 0}
 --- !u!114 &326364160
 MonoBehaviour:
@@ -486,10 +486,10 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: New Text
+  m_text: ':'
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 4240469e79edba341b544153c38274cd, type: 2}
+  m_sharedMaterial: {fileID: 5287228002352329860, guid: 4240469e79edba341b544153c38274cd, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -513,8 +513,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 40
-  m_fontSizeBase: 40
+  m_fontSize: 50
+  m_fontSizeBase: 50
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -1037,7 +1037,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2572694528607532156, guid: e12d22c7e9f3f0c41a0334b1d51827d7, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 450
+      value: 500
       objectReference: {fileID: 0}
     - target: {fileID: 2572694528607532156, guid: e12d22c7e9f3f0c41a0334b1d51827d7, type: 3}
       propertyPath: m_LocalPosition.x
@@ -1181,7 +1181,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0.392}
+  m_Color: {r: 1, g: 1, b: 1, a: 0}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1601,7 +1601,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2572694528607532156, guid: e12d22c7e9f3f0c41a0334b1d51827d7, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 450
+      value: 500
       objectReference: {fileID: 0}
     - target: {fileID: 2572694528607532156, guid: e12d22c7e9f3f0c41a0334b1d51827d7, type: 3}
       propertyPath: m_LocalPosition.x
@@ -2591,7 +2591,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2572694528607532156, guid: e12d22c7e9f3f0c41a0334b1d51827d7, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 450
+      value: 500
       objectReference: {fileID: 0}
     - target: {fileID: 2572694528607532156, guid: e12d22c7e9f3f0c41a0334b1d51827d7, type: 3}
       propertyPath: m_LocalPosition.x
@@ -2671,6 +2671,7 @@ MonoBehaviour:
   titleText: {fileID: 2421024010996295255}
   panelRoot: {fileID: 1902367704254321794}
   cancelButton: {fileID: 1249296998}
+  targetSelectionUI: {fileID: 6209748191746044783}
 --- !u!1 &6218455590970584560
 GameObject:
   m_ObjectHideFlags: 0
