@@ -28,7 +28,6 @@ public class MainGameManager : NetworkBehaviour
 
         if (!IsOwner)
             return;
-
     }
 
     private IEnumerator InitializeWhenReady()
@@ -37,13 +36,14 @@ public class MainGameManager : NetworkBehaviour
                PlayerNetwork.LocalPlayer == null ||
                PlayerNetwork.LocalPlayer.SelectedCharacterIndex.Value < 0 ||
                GameState.Instance == null ||
-               GameState.Instance.turnOrder.Count == 0)
+               GameState.Instance.turnOrder.Count == 0 ||
+               GameDatabase.Instance.chosenCharacters.Count == 0)
         {
             yield return null;
         }
 
-        // wait an extra frame to ensure network variables are synced
-        yield return new WaitForSeconds(0.2f);
+
+        yield return new WaitForSeconds(0.2f); // ensure sync
 
         LoadMyCharacter();
         ApplyTheme();
@@ -53,7 +53,6 @@ public class MainGameManager : NetworkBehaviour
         initialized = true;
         Debug.Log($"[MainGame] Initialized for player {NetworkManager.Singleton.LocalClientId}");
     }
-
 
     void LoadMyCharacter()
     {
@@ -104,64 +103,46 @@ public class MainGameManager : NetworkBehaviour
     {
         Debug.Log($"[Skill] Trying to use: {skill.skillName} | Requires target: {skill.requiresTarget}");
 
-        // ⚡ Energy check
         if (skill.energyCost > energy)
         {
             feedbackText.text = "⚡ Not enough energy!";
             return;
         }
 
-        // 🎯 If requires target → open popup (local only!)
         if (skill.requiresTarget)
         {
-            // ✅ Activate TargetSelectionUI only when needed
             targetSelectionUI.gameObject.SetActive(true);
-
-            if (!IsOwner)
-            {
-                Debug.Log("[Skill] Not owner, opening TargetSelectionUI locally only.");
-                targetSelectionUI.Open(this, skill);
-                return;
-            }
-
             targetSelectionUI.Open(this, skill);
             return;
         }
 
-        // ⚡ Otherwise execute immediately
         ExecuteSkill(skill, ulong.MaxValue);
     }
-
-
-
 
     public void OnTargetSelected(CharacterDataSO.SkillData skill, ulong targetClientId)
     {
         energy -= skill.energyCost;
         UpdateUI();
-
-        RequestSkillUseServerRpc(skill.skillName, targetClientId);
+        RequestSkillUseServerRpc(skill.skillName, skill.description, targetClientId);
     }
 
     public void ExecuteSkill(CharacterDataSO.SkillData skill, ulong targetClientId)
     {
         energy -= skill.energyCost;
         UpdateUI();
-
-        RequestSkillUseServerRpc(skill.skillName, targetClientId);
+        RequestSkillUseServerRpc(skill.skillName, skill.description, targetClientId);
     }
 
+    // ============================================================
+    // 🧠 SERVER SIDE LOGIC
+    // ============================================================
     [ServerRpc(RequireOwnership = false)]
-    void RequestSkillUseServerRpc(string skillName, ulong targetClientId, ServerRpcParams rpcParams = default)
+    void RequestSkillUseServerRpc(string skillName, string skillDesc, ulong targetClientId, ServerRpcParams rpcParams = default)
     {
         ulong senderId = rpcParams.Receive.SenderClientId;
-        string attackerName = GameDatabase.Instance.GetCharacterName(senderId);
+        SendSkillUseMessageClientRpc(senderId, targetClientId, skillName, skillDesc);
 
-        // 💬 Notify target
-        if (targetClientId != ulong.MaxValue)
-            NotifyAttackClientRpc(targetClientId, attackerName, skillName);
-
-        // 🧠 Special case: Carabao Ground Slam (stun)
+        // Example: apply Ground Slam effect
         if (skillName == "Ground Slam" && targetClientId != ulong.MaxValue)
         {
             var target = FindPlayerNetwork(targetClientId);
@@ -173,22 +154,51 @@ public class MainGameManager : NetworkBehaviour
         }
     }
 
+    // ============================================================
+    // 📢 CLIENT-SIDE FEEDBACK BROADCAST
+    // ============================================================
     [ClientRpc]
-    void NotifyAttackClientRpc(ulong targetClientId, string attackerName, string skillName)
+    void SendSkillUseMessageClientRpc(ulong attackerId, ulong targetId, string skillName, string skillDesc)
     {
-        if (NetworkManager.Singleton.LocalClientId == targetClientId)
-        {
-            feedbackText.text = $"💥 {attackerName} used {skillName} on you!";
+        ulong myId = NetworkManager.Singleton.LocalClientId;
 
-            if (attackPopupPrefab != null)
-            {
-                var popup = Instantiate(attackPopupPrefab, transform);
-                popup.GetComponentInChildren<TMP_Text>().text = $"{attackerName} attacked with {skillName}!";
-                Destroy(popup, 3f);
-            }
+        string attackerName = GameDatabase.Instance.GetCharacterName(attackerId);
+        string targetName = targetId != ulong.MaxValue ? GameDatabase.Instance.GetCharacterName(targetId) : "no one";
+
+        string message;
+        if (myId == attackerId)
+        {
+            message = $"✅ You used {skillName}" +
+                      (targetId != ulong.MaxValue ? $" on {targetName}!" : "!") +
+                      $"\n🌀 {skillDesc}";
+        }
+        else if (myId == targetId)
+        {
+            message = $"💥 {attackerName} used {skillName} on you!" +
+                      $"\n🌀 {skillDesc}";
+        }
+        else
+        {
+            message = $"💥 {attackerName} used {skillName}" +
+                      (targetId != ulong.MaxValue ? $" on {targetName}!" : "!") +
+                      $"\n🌀 {skillDesc}";
+        }
+
+        // ✅ Update feedback text
+        feedbackText.text = message;
+
+        // 🪄 Optional popup for attacker & target
+        if (attackPopupPrefab != null && (myId == attackerId || myId == targetId))
+        {
+            var popup = Instantiate(attackPopupPrefab, transform);
+            popup.GetComponentInChildren<TMP_Text>().text = message;
+            Destroy(popup, 4f);
         }
     }
 
+    // ============================================================
+    // 🔧 HELPERS
+    // ============================================================
     private PlayerNetwork FindPlayerNetwork(ulong clientId)
     {
         foreach (var pn in FindObjectsByType<PlayerNetwork>(FindObjectsSortMode.None))
@@ -230,9 +240,8 @@ public class MainGameManager : NetworkBehaviour
         if (gs == null || gs.turnOrder.Count == 0)
             return;
 
-        gs.AdvanceTurn(); // ✅ skip stunned logic handled here
+        gs.AdvanceTurn();
 
-        // ✅ Full round = +1 energy for everyone
         if (gs.currentTurnIndex.Value == 0)
         {
             foreach (var clientId in gs.turnOrder)

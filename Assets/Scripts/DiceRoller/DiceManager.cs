@@ -170,16 +170,14 @@ public class DiceManager : NetworkBehaviour
         // 🟩 Tell all clients to show the popup too
         ShowResultsPopupClientRpc();
 
-        if (IsServer && continueButton != null)
+        if (IsServer)
         {
-            continueButton.gameObject.SetActive(true);
-            continueButton.onClick.RemoveAllListeners();
-            continueButton.onClick.AddListener(() =>
-            {
-                Debug.Log("[DiceManager] Host clicked Continue — loading MainGame...");
-                StartCoroutine(StartMainGame());
-            });
+            if (GameDatabase.Instance != null)
+                GameDatabase.Instance.SendSyncToClientsClientRpc(); // ✅ correct name now
+
+            NetworkManager.Singleton.SceneManager.LoadScene("MainGame", LoadSceneMode.Single);
         }
+
     }
 
     [ClientRpc]
@@ -214,8 +212,15 @@ public class DiceManager : NetworkBehaviour
         SaveTurnOrderToGameState();
 
         if (IsServer)
+        {
+            // Make sure GameDatabase syncs chosen characters before scene load
+            if (GameDatabase.Instance != null)
+                GameDatabase.Instance.SendSyncToClientsClientRpc();
+
             NetworkManager.Singleton.SceneManager.LoadScene("MainGame", LoadSceneMode.Single);
+        }
     }
+
 
     private void CleanupDice()
     {

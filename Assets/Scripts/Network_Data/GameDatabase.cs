@@ -1,15 +1,15 @@
+﻿using Unity.Netcode;
 using System.Collections.Generic;
 using UnityEngine;
-using static CharacterDataSO;
+using System.Linq;
 
-public class GameDatabase : MonoBehaviour
+public class GameDatabase : NetworkBehaviour
 {
     public static GameDatabase Instance { get; private set; }
 
     [Header("Characters (0=Eagle,1=Tarsier,2=Carabao,3=Whale)")]
     public CharacterDataSO[] allCharacters;
 
-    // Key = ClientId, Value = Character index
     public Dictionary<ulong, int> chosenCharacters = new();
 
     void Awake()
@@ -24,17 +24,12 @@ public class GameDatabase : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
-    /// <summary>
-    /// Called by Lobby when player locks a character.
-    /// </summary>
     public void SetCharacter(ulong clientId, int characterIndex)
     {
         chosenCharacters[clientId] = characterIndex;
+        PushSyncToClients(); // 🧩 Auto-sync when new data is set
     }
 
-    /// <summary>
-    /// Get the CharacterDataSO for a specific player.
-    /// </summary>
     public CharacterDataSO GetCharacterData(ulong clientId)
     {
         if (chosenCharacters.TryGetValue(clientId, out int index))
@@ -42,28 +37,41 @@ public class GameDatabase : MonoBehaviour
             if (index >= 0 && index < allCharacters.Length)
                 return allCharacters[index];
         }
-
-        // Prevent warning spam by ignoring uninitialized players
-        // Debug.LogWarning($"[GameDatabase] No character assigned for player {clientId}");
         return null;
     }
 
-
-    /// <summary>
-    /// Helper: get character name
-    /// </summary>
     public string GetCharacterName(ulong clientId)
     {
         var data = GetCharacterData(clientId);
-        return data != null ? data.characterName : "Unknown";
+        return data != null ? data.characterName : $"Player {clientId}";
     }
 
-    /// <summary>
-    /// Helper: get skill list
-    /// </summary>
-    public SkillData[] GetSkills(ulong clientId)
+    // 🧩 --- NETWORK SYNCING ---
+    void PushSyncToClients()
     {
-        var data = GetCharacterData(clientId);
-        return data != null ? data.skills : null;
+        if (IsServer)
+        {
+            var ids = chosenCharacters.Keys.ToArray();
+            var indices = chosenCharacters.Values.ToArray();
+            SyncChosenCharactersClientRpc(ids, indices);
+        }
     }
+
+    [ClientRpc]
+    void SyncChosenCharactersClientRpc(ulong[] ids, int[] indices)
+    {
+        chosenCharacters.Clear();
+        for (int i = 0; i < ids.Length; i++)
+            chosenCharacters[ids[i]] = indices[i];
+    }
+
+    [ClientRpc]
+    public void SendSyncToClientsClientRpc()
+    {
+        var ids = chosenCharacters.Keys.ToArray();
+        var indices = chosenCharacters.Values.ToArray();
+        SyncChosenCharactersClientRpc(ids, indices);
+    }
+
+
 }
