@@ -22,6 +22,9 @@ public class CardRevealController : MonoBehaviour
     [Range(0f, 1f)]
     public float textSlideOutRatio = 0.15f; // % of total duration for text slide out
 
+    [Header("SFX")]
+    public AudioClip revealSFX; // assign the clip via Inspector
+
     private Vector3 bgOriginalScale;
     private Vector3 bgOriginalPos;
     private Vector3 textOriginalPos;
@@ -41,6 +44,12 @@ public class CardRevealController : MonoBehaviour
 
     public IEnumerator RevealCoroutine(string abilityName = "Stampede")
     {
+        // Play reveal SFX via persistent SoundManager
+        if (revealSFX != null)
+        {
+            SoundManager.Instance.sfxSource.PlayOneShot(revealSFX);
+        }
+
         // Calculate durations
         float fadeInDuration = totalDuration * fadeInRatio;
         float slideInDuration = totalDuration * textSlideInRatio;
@@ -114,7 +123,7 @@ public class CardRevealController : MonoBehaviour
         // 5️⃣ Fade out background AFTER text is fully gone
         elapsed = 0f;
         float startAlpha = background.alpha;
-        while (elapsed < 0.5f) // fade out duration fixed to 0.5s or can make variable
+        while (elapsed < 0.5f) // fade out duration fixed to 0.5s
         {
             elapsed += Time.deltaTime;
             float t = elapsed / 0.5f;
