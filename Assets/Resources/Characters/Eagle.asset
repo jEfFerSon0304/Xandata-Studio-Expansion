@@ -21,21 +21,21 @@ MonoBehaviour:
     isUltimate: 0
     skillIcon: {fileID: 21300000, guid: 513302d3b87e5594199242dcd17dc810, type: 3}
     requiresTarget: 0
-    animationData: {fileID: 0}
+    animationData: {fileID: 11400000, guid: 3d576912ad0d3854594b3c8b039fb616, type: 2}
   - skillName: Gust of Wind
     description: Choose one player and push them back 3 tiles.
     energyCost: 2
     isUltimate: 0
-    skillIcon: {fileID: 21300000, guid: e17f71a497d03954b9804a0cc2bbb5df, type: 3}
+    skillIcon: {fileID: 21300000, guid: a15f49af983609543b3b27797db5c5be, type: 3}
     requiresTarget: 1
-    animationData: {fileID: 0}
+    animationData: {fileID: 11400000, guid: 10e44af5009be8f409d02fb5bc1cd3da, type: 2}
   - skillName: Sky Soar
     description: Teleport up to 10 tiles ahead to any visible tile on the board.
     energyCost: 3
     isUltimate: 1
-    skillIcon: {fileID: 0}
+    skillIcon: {fileID: 21300000, guid: 050dfed6131ada345bcc0989edef900c, type: 3}
     requiresTarget: 0
-    animationData: {fileID: 0}
+    animationData: {fileID: 11400000, guid: ec2d11fd1218c044f94b7729c3775968, type: 2}
   themeColor: {r: 1, g: 1, b: 1, a: 1}
   description: 
   characterPrefab: {fileID: 0}

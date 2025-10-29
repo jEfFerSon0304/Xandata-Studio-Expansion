@@ -21,7 +21,7 @@ MonoBehaviour:
     isUltimate: 0
     skillIcon: {fileID: 21300000, guid: c44d379b2139f8247af4c1e2afc47192, type: 3}
     requiresTarget: 0
-    animationData: {fileID: 0}
+    animationData: {fileID: 11400000, guid: c9b62084b5a26f742ba787a8c8f5dafd, type: 2}
   - skillName: Bubble Trap
     description: "Choose one player \u2014 they can\u2019t use any powerups on their
       next turn."
@@ -29,15 +29,15 @@ MonoBehaviour:
     isUltimate: 0
     skillIcon: {fileID: 21300000, guid: e7aba49cf62b5fe4fb683e31fd9f90ab, type: 3}
     requiresTarget: 1
-    animationData: {fileID: 0}
+    animationData: {fileID: 11400000, guid: 6276169d16775af4caf5db614dcc2533, type: 2}
   - skillName: Tidal Reversal
     description: Swim 5 tiles forward. Reverse the movement direction of all opponents
       for one full round (they move backward on their next roll)
     energyCost: 3
     isUltimate: 1
-    skillIcon: {fileID: 0}
+    skillIcon: {fileID: 21300000, guid: b3b7a62b28001d544b3f1703b69bb539, type: 3}
     requiresTarget: 0
-    animationData: {fileID: 0}
+    animationData: {fileID: 11400000, guid: a92aa26581472d645ae9eb4c4d8925b2, type: 2}
   themeColor: {r: 1, g: 1, b: 1, a: 1}
   description: 
   characterPrefab: {fileID: 0}

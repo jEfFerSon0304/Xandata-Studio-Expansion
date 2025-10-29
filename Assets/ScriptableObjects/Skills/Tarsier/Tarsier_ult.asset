@@ -16,20 +16,20 @@ MonoBehaviour:
   mainImage: {fileID: 21300000, guid: a89db35918754e44d9ec0b4a8694ecd6, type: 3}
   useFadeTransition: 1
   fadeDuration: 0.5
-  mainImageDelay: 0.2
+  mainImageDelay: 3
   showSkillText: 1
   textSlideIn: 1
   textFadeInDelay: 0.3
   textFadeInDuration: 0.5
   textStayDuration: 1.5
-  skillSFX: {fileID: 0}
+  skillSFX: {fileID: 8300000, guid: 25bfa7811a1ff6949bdf9103c1498855, type: 3}
   backgroundTint: {r: 0, g: 0, b: 0, a: 1}
   showTapToContinue: 1
   shakeMainImage: 1
-  shakeIntensity: 10
-  shakeDuration: 0.4
+  shakeIntensity: 5
+  shakeDuration: 2
   textAnimator:
-    style: 0
+    style: 1
     duration: 0.8
     slideDistance: 100
     shakeIntensity: 8
@@ -37,7 +37,7 @@ MonoBehaviour:
     waveSpeed: 3
   skillFont: {fileID: 0}
   skillTextColor: {r: 1, g: 1, b: 1, a: 1}
-  textEffect: 1
+  textEffect: 3
   customCurve:
     serializedVersion: 2
     m_Curve:
@@ -64,4 +64,4 @@ MonoBehaviour:
     m_RotationOrder: 4
   textMoveDistance: 200
   textScaleFactor: 1.2
-  totalDuration: 3
+  totalDuration: 5.5

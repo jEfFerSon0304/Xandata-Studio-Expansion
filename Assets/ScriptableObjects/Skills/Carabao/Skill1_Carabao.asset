@@ -22,7 +22,7 @@ MonoBehaviour:
   textFadeInDelay: 0.3
   textFadeInDuration: 0.5
   textStayDuration: 1.5
-  skillSFX: {fileID: 0}
+  skillSFX: {fileID: 8300000, guid: 6ec1deec92b856749b8bf907e7391497, type: 3}
   backgroundTint: {r: 0, g: 0, b: 0, a: 1}
   showTapToContinue: 1
   shakeMainImage: 1
