@@ -1,8 +1,9 @@
 ﻿using UnityEngine;
 using Unity.Netcode;
 using TMPro;
-using System.Collections;
 using UnityEngine.UI;
+using System.Collections;
+using System.Linq;
 
 public class MainGameManager : NetworkBehaviour
 {
@@ -13,6 +14,11 @@ public class MainGameManager : NetworkBehaviour
     public Transform handPanel;
     public GameObject skillCardPrefab;
     public Button endTurnButton;
+
+    [Header("Turn Order UI")]
+    public Button turnOrderButton;
+    public TurnOrderPopupUI turnOrderPopupUI;
+
 
     [Header("Popups & Targeting")]
     public TargetSelectionUI targetSelectionUI;
@@ -25,10 +31,6 @@ public class MainGameManager : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         StartCoroutine(InitializeWhenReady());
-
-        if (!IsOwner)
-            return;
-
     }
 
     private IEnumerator InitializeWhenReady()
@@ -42,7 +44,6 @@ public class MainGameManager : NetworkBehaviour
             yield return null;
         }
 
-        // wait an extra frame to ensure network variables are synced
         yield return new WaitForSeconds(0.2f);
 
         LoadMyCharacter();
@@ -50,10 +51,30 @@ public class MainGameManager : NetworkBehaviour
         SpawnSkillCards();
         UpdateUI();
 
-        initialized = true;
-        Debug.Log($"[MainGame] Initialized for player {NetworkManager.Singleton.LocalClientId}");
-    }
+        // 🟢 Request turn order and character sync if client
+        if (!IsServer && GameState.Instance != null)
+        {
+            Debug.Log("[MainGameManager] Requesting initial turn order and character sync...");
+            GameState.Instance.RequestInitialTurnOrderServerRpc();
 
+            var myPlayer = PlayerNetwork.LocalPlayer;
+            if (myPlayer != null)
+                myPlayer.RequestCharacterSyncServerRpc();
+        }
+
+        // 🔘 Setup Turn Order Button
+        if (turnOrderButton != null && turnOrderPopupUI != null)
+        {
+            turnOrderButton.onClick.RemoveAllListeners();
+            turnOrderButton.onClick.AddListener(() =>
+            {
+                turnOrderPopupUI.TogglePanel();
+            });
+        }
+
+
+        initialized = true;
+    }
 
     void LoadMyCharacter()
     {
@@ -98,8 +119,9 @@ public class MainGameManager : NetworkBehaviour
     }
 
     // ============================================================
-    // 🪄 SKILL USAGE
+    // ⚔️ SKILL SYSTEM (RESTORED)
     // ============================================================
+
     public void TryUseSkill(CharacterDataSO.SkillData skill)
     {
         Debug.Log($"[Skill] Trying to use: {skill.skillName} | Requires target: {skill.requiresTarget}");
@@ -114,16 +136,7 @@ public class MainGameManager : NetworkBehaviour
         // 🎯 If requires target → open popup (local only!)
         if (skill.requiresTarget)
         {
-            // ✅ Activate TargetSelectionUI only when needed
             targetSelectionUI.gameObject.SetActive(true);
-
-            if (!IsOwner)
-            {
-                Debug.Log("[Skill] Not owner, opening TargetSelectionUI locally only.");
-                targetSelectionUI.Open(this, skill);
-                return;
-            }
-
             targetSelectionUI.Open(this, skill);
             return;
         }
@@ -131,9 +144,6 @@ public class MainGameManager : NetworkBehaviour
         // ⚡ Otherwise execute immediately
         ExecuteSkill(skill, ulong.MaxValue);
     }
-
-
-
 
     public void OnTargetSelected(CharacterDataSO.SkillData skill, ulong targetClientId)
     {
@@ -161,7 +171,7 @@ public class MainGameManager : NetworkBehaviour
         if (targetClientId != ulong.MaxValue)
             NotifyAttackClientRpc(targetClientId, attackerName, skillName);
 
-        // 🧠 Special case: Carabao Ground Slam (stun)
+        // 🧠 Example: Carabao Ground Slam (stun)
         if (skillName == "Ground Slam" && targetClientId != ulong.MaxValue)
         {
             var target = FindPlayerNetwork(targetClientId);
@@ -198,8 +208,9 @@ public class MainGameManager : NetworkBehaviour
     }
 
     // ============================================================
-    // 🕹️ END TURN SYSTEM
+    // 🕹️ END TURN SYSTEM (unchanged)
     // ============================================================
+
     public void EndTurn()
     {
         if (!IsServer)
