@@ -36,12 +36,10 @@ public class MainGameManager : NetworkBehaviour
                PlayerNetwork.LocalPlayer == null ||
                PlayerNetwork.LocalPlayer.SelectedCharacterIndex.Value < 0 ||
                GameState.Instance == null ||
-               GameState.Instance.turnOrder.Count == 0 ||
-               GameDatabase.Instance.chosenCharacters.Count == 0)
+               GameState.Instance.turnOrder.Count == 0)
         {
             yield return null;
         }
-
 
         yield return new WaitForSeconds(0.2f); // ensure sync
 

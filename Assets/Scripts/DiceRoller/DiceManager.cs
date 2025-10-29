@@ -53,6 +53,9 @@ public class DiceManager : NetworkBehaviour
         UpdateLocalUI();
     }
 
+    // ============================================================
+    // 🎲 DICE SPAWNING
+    // ============================================================
     private void SpawnDiceForAll()
     {
         Color[] palette = { Color.red, Color.blue, Color.green, Color.yellow };
@@ -73,6 +76,9 @@ public class DiceManager : NetworkBehaviour
         }
     }
 
+    // ============================================================
+    // 🌀 ROLLING
+    // ============================================================
     private HashSet<ulong> GetExpectedRollers()
     {
         if (tieBand.Count > 0) return new HashSet<ulong>(tieBand);
@@ -111,6 +117,9 @@ public class DiceManager : NetworkBehaviour
         PushSyncToAll();
     }
 
+    // ============================================================
+    // 🧠 RANK EVALUATION
+    // ============================================================
     private void EvaluateRound(HashSet<ulong> expected)
     {
         tieBand.Clear();
@@ -127,7 +136,6 @@ public class DiceManager : NetworkBehaviour
         if (highest.Count() == 1) Lock(highest.First(), nextTop);
         else foreach (var id in highest) tieBand.Add(id);
 
-        // Re-check remaining
         expected = GetExpectedRollers();
         if (expected.Count == 0) FinalizeResults();
 
@@ -162,22 +170,39 @@ public class DiceManager : NetworkBehaviour
             finalRanks[id] = rank;
     }
 
+    // ============================================================
+    // 🏁 FINALIZATION & SYNC
+    // ============================================================
     private void FinalizeResults()
     {
         tieBand.Clear();
         PushSyncToAll();
 
-        // 🟩 Tell all clients to show the popup too
         ShowResultsPopupClientRpc();
 
-        if (IsServer)
+<<<<<<< HEAD
+        if (IsServer && GameDatabase.Instance != null)
         {
-            if (GameDatabase.Instance != null)
-                GameDatabase.Instance.SendSyncToClientsClientRpc(); // ✅ correct name now
+            var dbNetObj = GameDatabase.Instance.GetComponent<NetworkObject>();
+            if (!dbNetObj.IsSpawned)
+                dbNetObj.Spawn();
 
-            NetworkManager.Singleton.SceneManager.LoadScene("MainGame", LoadSceneMode.Single);
+            GameDatabase.Instance.SendSyncToClientsClientRpc();
+
+            SaveTurnOrderToGameState();
+            StartCoroutine(TransitionToMainGame());
+=======
+        if (IsServer && continueButton != null)
+        {
+            continueButton.gameObject.SetActive(true);
+            continueButton.onClick.RemoveAllListeners();
+            continueButton.onClick.AddListener(() =>
+            {
+                Debug.Log("[DiceManager] Host clicked Continue — loading MainGame...");
+                StartCoroutine(StartMainGame());
+            });
+>>>>>>> parent of 64b5cc9 (yuh)
         }
-
     }
 
     [ClientRpc]
@@ -189,7 +214,6 @@ public class DiceManager : NetworkBehaviour
             StartCoroutine(FadeInOrderPopup());
         }
 
-        // 🧠 All clients update their UI after popup appears
         UpdateLocalUI();
     }
 
@@ -205,22 +229,14 @@ public class DiceManager : NetworkBehaviour
         }
     }
 
-    private IEnumerator StartMainGame()
+    private IEnumerator TransitionToMainGame()
     {
-        yield return new WaitForSeconds(1f);
+        yield return new WaitForSeconds(2f);
         CleanupDice();
-        SaveTurnOrderToGameState();
 
         if (IsServer)
-        {
-            // Make sure GameDatabase syncs chosen characters before scene load
-            if (GameDatabase.Instance != null)
-                GameDatabase.Instance.SendSyncToClientsClientRpc();
-
             NetworkManager.Singleton.SceneManager.LoadScene("MainGame", LoadSceneMode.Single);
-        }
     }
-
 
     private void CleanupDice()
     {
@@ -266,22 +282,9 @@ public class DiceManager : NetworkBehaviour
         }
     }
 
-    private int NextUnusedRankFromTop()
-    {
-        for (int i = 1; i <= TotalPlayers; i++)
-            if (!finalRanks.ContainsValue(i))
-                return i;
-        return TotalPlayers;
-    }
-
-    private int NextUnusedRankFromBottom()
-    {
-        for (int i = TotalPlayers; i >= 1; i--)
-            if (!finalRanks.ContainsValue(i))
-                return i;
-        return 1;
-    }
-
+    // ============================================================
+    // 📡 NETWORK SYNC
+    // ============================================================
     private void PushSyncToAll()
     {
         var payload = BuildStateArray();
@@ -331,7 +334,6 @@ public class DiceManager : NetworkBehaviour
             }
         }
 
-        // 🧩 Refresh UI on every client after receiving sync
         UpdateLocalUI();
     }
 
@@ -339,6 +341,9 @@ public class DiceManager : NetworkBehaviour
     private void RequestSyncServerRpc(ServerRpcParams r = default)
         => PushSyncToAll();
 
+    // ============================================================
+    // 🧾 UI UPDATE
+    // ============================================================
     private void UpdateLocalUI()
     {
         ulong me = NetworkManager.Singleton.LocalClientId;
@@ -357,7 +362,6 @@ public class DiceManager : NetworkBehaviour
             {
                 int rankValue = kvp.Value;
                 string suffix = GetRankSuffix(rankValue);
-                int playerNumberShown = index + 1;
                 ulong clientId = kvp.Key;
 
                 Color color = playerColors.ContainsKey(clientId) ? playerColors[clientId] : Color.white;
@@ -372,9 +376,7 @@ public class DiceManager : NetworkBehaviour
                 }
 
                 string colorName = ColorToName(color);
-
-                // Gold rank + player line in their color 🎨
-                return $"<color=#FFD700>{rankValue}{suffix}</color> - <color=#{colorHex}>Player {playerNumberShown} {charName} [{colorName}]</color>";
+                return $"<color=#FFD700>{rankValue}{suffix}</color> - <color=#{colorHex}>{charName} [{colorName}]</color>";
             });
 
             orderText.text = string.Join("\n", lines);
@@ -404,6 +406,24 @@ public class DiceManager : NetworkBehaviour
          c == Color.blue ? "Blue" :
          c == Color.green ? "Green" :
          c == Color.yellow ? "Yellow" : "Unknown");
+
+    // ============================================================
+    // 🧱 STRUCTS + RANK HELPERS ✅
+    // ============================================================
+    private int NextUnusedRankFromTop()
+    {
+        if (finalRanks.Count == 0)
+            return 1; // first rank
+        return finalRanks.Values.Max() + 1;
+    }
+
+    private int NextUnusedRankFromBottom()
+    {
+        int total = TotalPlayers;
+        if (finalRanks.Count == 0)
+            return total;
+        return finalRanks.Values.Min() - 1;
+    }
 
     public struct PlayerState : INetworkSerializable
     {

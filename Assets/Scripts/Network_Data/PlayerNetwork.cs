@@ -23,10 +23,10 @@ public class PlayerNetwork : NetworkBehaviour
     public NetworkVariable<bool> isStunned =
         new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
-    private GameObject localUIInstance; // store reference to spawned UI
+    private GameObject localUIInstance;
 
-    public GameObject gameStatePrefab; // 👈 assign in Inspector (Server prefab)
-
+    [Header("References")]
+    public GameObject gameStatePrefab;
 
     void Awake() => DontDestroyOnLoad(gameObject);
 
@@ -36,7 +36,7 @@ public class PlayerNetwork : NetworkBehaviour
         {
             LocalPlayer = this;
 
-            // Spawn MainGame UI (already existing code)
+            // ✅ Spawn MainGame UI for local player
             if (mainGameUIPrefab != null)
             {
                 Debug.Log($"[UI] Spawning local MainGameManager UI for player {OwnerClientId}");
@@ -45,7 +45,7 @@ public class PlayerNetwork : NetworkBehaviour
             }
         }
 
-        // ✅ SERVER ONLY: Spawn the GameState if it doesn't exist yet
+        // ✅ SERVER ONLY: Spawn GameState if it doesn't exist
         if (IsServer && GameState.Instance == null)
         {
             var gs = Instantiate(gameStatePrefab);
@@ -53,14 +53,21 @@ public class PlayerNetwork : NetworkBehaviour
             Debug.Log("[Server] Spawned GameState network object.");
         }
 
+        // ✅ Start assignment routine (safe wait for GameDatabase)
         if (IsServer)
             StartCoroutine(AssignSlotAndCharacter());
     }
 
     private IEnumerator AssignSlotAndCharacter()
     {
-        while (GameDatabase.Instance == null || GameDatabase.Instance.allCharacters.Length == 0)
+        // Wait until GameDatabase exists AND is spawned
+        while (GameDatabase.Instance == null ||
+               GameDatabase.Instance.allCharacters.Length == 0 ||
+               GameDatabase.Instance.GetComponent<NetworkObject>() == null ||
+               !GameDatabase.Instance.GetComponent<NetworkObject>().IsSpawned)
+        {
             yield return null;
+        }
 
         var db = GameDatabase.Instance;
         var players = FindObjectsByType<PlayerNetwork>(FindObjectsSortMode.None)
@@ -71,13 +78,10 @@ public class PlayerNetwork : NetworkBehaviour
         if (SelectedCharacterIndex.Value < 0)
             SelectedCharacterIndex.Value = SlotIndex.Value % db.allCharacters.Length;
 
-        // ✅ Register character assignment in the shared GameDatabase
-        // After registering character
-        GameDatabase.Instance.SetCharacter(OwnerClientId, SelectedCharacterIndex.Value);
+        // ✅ Safe registration
+        db.SetCharacter(OwnerClientId, SelectedCharacterIndex.Value);
         UpdateCharacterClientRpc(OwnerClientId, SelectedCharacterIndex.Value);
-
         SyncCharacterToClientsClientRpc(OwnerClientId, SelectedCharacterIndex.Value);
-
 
         IsReady.Value = false;
         Debug.Log($"[ASSIGN] Player {OwnerClientId} | Slot {SlotIndex.Value} | Character {SelectedCharacterIndex.Value}");
@@ -90,7 +94,6 @@ public class PlayerNetwork : NetworkBehaviour
         if (GameDatabase.Instance != null)
             GameDatabase.Instance.SetCharacter(clientId, charIndex);
     }
-
 
     public static void NotifyUpdate() =>
         OnAnyStateChanged?.Invoke();

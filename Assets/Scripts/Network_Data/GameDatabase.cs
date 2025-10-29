@@ -1,4 +1,4 @@
-﻿using Unity.Netcode;
+using Unity.Netcode;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
@@ -64,14 +64,4 @@ public class GameDatabase : NetworkBehaviour
         for (int i = 0; i < ids.Length; i++)
             chosenCharacters[ids[i]] = indices[i];
     }
-
-    [ClientRpc]
-    public void SendSyncToClientsClientRpc()
-    {
-        var ids = chosenCharacters.Keys.ToArray();
-        var indices = chosenCharacters.Values.ToArray();
-        SyncChosenCharactersClientRpc(ids, indices);
-    }
-
-
 }
