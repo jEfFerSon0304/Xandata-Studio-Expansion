@@ -79,10 +79,40 @@ public class GameState : NetworkBehaviour
 
         trophies[clientId]++;
         MovePlayerToLast(clientId);
+
         Debug.Log($"[Trophy] Player {clientId} gained a trophy! Total: {trophies[clientId]}");
+
+        // 🟢 Check win condition
+        if (trophies[clientId] >= 3)
+        {
+            Debug.Log($"[WIN] Player {clientId} reached 3 stars — sending to VictoryScene!");
+            SendPlayerToVictoryClientRpc(clientId, new ClientRpcParams
+            {
+                Send = new ClientRpcSendParams
+                {
+                    TargetClientIds = new[] { clientId }
+                }
+            });
+            return;
+        }
 
         StartCoroutine(SendSyncDelayed());
     }
+
+    [ClientRpc]
+    private void SendPlayerToVictoryClientRpc(ulong clientId, ClientRpcParams rpcParams = default)
+    {
+        ulong localId = NetworkManager.Singleton.LocalClientId;
+
+        // ✅ Only run for the target player
+        if (localId == clientId)
+        {
+            Debug.Log("[Victory] You reached 3 stars! Loading Victory Scene...");
+            UnityEngine.SceneManagement.SceneManager.LoadScene("VictoryScene");
+        }
+    }
+
+
 
     private IEnumerator SendSyncDelayed()
     {
