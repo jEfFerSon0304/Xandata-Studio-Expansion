@@ -14,25 +14,47 @@ public class MovingClouds : MonoBehaviour
     RectTransform rect;
     Image image;
 
-    void Start()
+    // Static array to remember all clouds' positions
+    static Vector2[] cloudPositions;
+
+    void Awake()
     {
         rect = GetComponent<RectTransform>();
         image = GetComponent<Image>();
+
+        int totalClouds = transform.parent.childCount;
+        int index = transform.GetSiblingIndex();
+
+        // Initialize positions array on first scene
+        if (cloudPositions == null)
+        {
+            cloudPositions = new Vector2[totalClouds];
+            for (int i = 0; i < totalClouds; i++)
+            {
+                cloudPositions[i] = transform.parent.GetChild(i).GetComponent<RectTransform>().anchoredPosition;
+            }
+        }
+
+        // Restore position for this cloud
+        rect.anchoredPosition = cloudPositions[index];
+
+        // Persist across scenes
+        if (transform.parent.parent == null) // ensure root
+            DontDestroyOnLoad(transform.parent.gameObject);
     }
 
     void Update()
     {
-        // Move the cloud horizontally
+        // Move cloud horizontally
         rect.anchoredPosition += Vector2.right * speed * Time.deltaTime;
 
-        // Loop it when it goes too far right
+        // Loop when past endX
         if (rect.anchoredPosition.x > endX)
             rect.anchoredPosition = new Vector2(startX, rect.anchoredPosition.y);
 
         // Fade in/out near edges
         float x = rect.anchoredPosition.x;
         float alpha = 1f;
-
         if (x < startX + fadeDistance)
             alpha = Mathf.InverseLerp(startX, startX + fadeDistance, x);
         else if (x > endX - fadeDistance)
@@ -41,5 +63,9 @@ public class MovingClouds : MonoBehaviour
         Color c = image.color;
         c.a = alpha;
         image.color = c;
+
+        // Save current position to static array
+        int index = rect.GetSiblingIndex();
+        cloudPositions[index] = rect.anchoredPosition;
     }
 }
