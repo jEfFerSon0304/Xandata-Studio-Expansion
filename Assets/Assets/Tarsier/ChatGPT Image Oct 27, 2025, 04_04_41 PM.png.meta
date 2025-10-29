@@ -1,5 +1,9 @@
 fileFormatVersion: 2
+<<<<<<<< HEAD:Assets/Assets/Tarsier/ChatGPT Image Oct 27, 2025, 04_04_41 PM.png.meta
 guid: 4ed91e768ab1d9046b8f8a9287f4d8ac
+========
+guid: db3c14f00ab45a94ab20c4a65e5455be
+>>>>>>>> parent of 50816cc (Merge branch 'v2' into Mah-Nika):Assets/Assets/Eagle/Gemini_Generated_Image_j3027kj3027kj302.png.meta
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -97,12 +101,12 @@ TextureImporter:
     buildTarget: Android
     maxTextureSize: 2048
     resizeAlgorithm: 0
-    textureFormat: 50
+    textureFormat: -1
     textureCompression: 1
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
-    overridden: 1
+    overridden: 0
     ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0

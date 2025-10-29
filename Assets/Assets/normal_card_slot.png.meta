@@ -1,5 +1,9 @@
 fileFormatVersion: 2
+<<<<<<<< HEAD:Assets/Assets/normal_card_slot.png.meta
 guid: 30e314c4b12c9824c82d5fb5b24fc9d8
+========
+guid: 4ed91e768ab1d9046b8f8a9287f4d8ac
+>>>>>>>> parent of 50816cc (Merge branch 'v2' into Mah-Nika):Assets/Assets/Tarsier/ChatGPT Image Oct 27, 2025, 04_04_41 PM.png.meta
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -45,7 +49,7 @@ TextureImporter:
   compressionQuality: 50
   spriteMode: 1
   spriteExtrude: 1
-  spriteMeshType: 1
+  spriteMeshType: 0
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100

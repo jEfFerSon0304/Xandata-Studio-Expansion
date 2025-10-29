@@ -1,5 +1,9 @@
 fileFormatVersion: 2
+<<<<<<<< HEAD:Assets/Assets/Carabao/ChatGPT Image Oct 27, 2025, 04_02_20 PM.png.meta
 guid: bfcd84e4eb5bc2342a4dfbc62852560e
+========
+guid: 8d6f8bf225886e44caf2748f0da7368a
+>>>>>>>> parent of 50816cc (Merge branch 'v2' into Mah-Nika):Assets/Assets/WhaleSharl/ChatGPT Image Oct 27, 2025, 04_10_36 PM.png.meta
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
