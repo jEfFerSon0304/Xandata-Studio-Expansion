@@ -15,9 +15,10 @@ public class MainGameManager : NetworkBehaviour
     public GameObject skillCardPrefab;
     public Button endTurnButton;
 
-    [Header("Turn Order Display")]
-    public Transform turnOrderPanel;
-    public GameObject turnOrderEntryPrefab;
+    [Header("Turn Order UI")]
+    public Button turnOrderButton;
+    public TurnOrderPopupUI turnOrderPopupUI;
+
 
     [Header("Popups & Targeting")]
     public TargetSelectionUI targetSelectionUI;
@@ -26,9 +27,6 @@ public class MainGameManager : NetworkBehaviour
     private CharacterDataSO myCharacter;
     private int energy = 5;
     private bool initialized = false;
-
-    private void OnEnable() => GameState.OnTurnOrderChangedEvent += RefreshTurnOrderUI;
-    private void OnDisable() => GameState.OnTurnOrderChangedEvent -= RefreshTurnOrderUI;
 
     public override void OnNetworkSpawn()
     {
@@ -52,7 +50,28 @@ public class MainGameManager : NetworkBehaviour
         ApplyTheme();
         SpawnSkillCards();
         UpdateUI();
-        RefreshTurnOrderUI();
+
+        // 🟢 Request turn order and character sync if client
+        if (!IsServer && GameState.Instance != null)
+        {
+            Debug.Log("[MainGameManager] Requesting initial turn order and character sync...");
+            GameState.Instance.RequestInitialTurnOrderServerRpc();
+
+            var myPlayer = PlayerNetwork.LocalPlayer;
+            if (myPlayer != null)
+                myPlayer.RequestCharacterSyncServerRpc();
+        }
+
+        // 🔘 Setup Turn Order Button
+        if (turnOrderButton != null && turnOrderPopupUI != null)
+        {
+            turnOrderButton.onClick.RemoveAllListeners();
+            turnOrderButton.onClick.AddListener(() =>
+            {
+                turnOrderPopupUI.TogglePanel();
+            });
+        }
+
 
         initialized = true;
     }
@@ -98,76 +117,6 @@ public class MainGameManager : NetworkBehaviour
         energyText.text = $"Energy: {energy}/5";
         endTurnButton.interactable = myTurn;
     }
-
-    // ============================================================
-    // 🧩 TURN ORDER DISPLAY
-    // ============================================================
-    void RefreshTurnOrderUI()
-    {
-        // ✅ Safety checks to avoid null/destroyed refs
-        if (GameState.Instance == null)
-        {
-            Debug.LogWarning("[TurnOrderUI] GameState missing, skipping refresh.");
-            return;
-        }
-
-        if (this == null || gameObject == null)
-        {
-            Debug.LogWarning("[TurnOrderUI] MainGameManager destroyed, skipping refresh.");
-            return;
-        }
-
-        if (turnOrderPanel == null || turnOrderEntryPrefab == null)
-        {
-            Debug.LogWarning("[TurnOrderUI] UI references missing, skipping refresh.");
-            return;
-        }
-
-        // In case the prefab was destroyed due to scene reload or RPC timing
-        if (turnOrderEntryPrefab.Equals(null))
-        {
-            Debug.LogWarning("[TurnOrderUI] Turn order entry prefab is invalid (destroyed).");
-            return;
-        }
-
-        // ✅ Destroy old list safely
-        foreach (Transform child in turnOrderPanel)
-        {
-            if (child != null)
-                Destroy(child.gameObject);
-        }
-
-        // ✅ Rebuild UI
-        foreach (var clientId in GameState.Instance.GetCurrentTurnOrder())
-        {
-            // Skip if prefab was unloaded or invalid
-            if (turnOrderEntryPrefab == null) break;
-
-            var entry = Instantiate(turnOrderEntryPrefab, turnOrderPanel);
-            if (entry == null) continue;
-
-            TMP_Text nameText = entry.transform.Find("NameText")?.GetComponent<TMP_Text>();
-            TMP_Text trophyText = entry.transform.Find("TrophyText")?.GetComponent<TMP_Text>();
-
-            if (nameText == null || trophyText == null)
-            {
-                Debug.LogWarning("[TurnOrderUI] Missing NameText/TrophyText in prefab.");
-                continue;
-            }
-
-            string playerName = GameDatabase.Instance?.GetCharacterName(clientId) ?? $"Player {clientId}";
-            int trophyCount = GameState.Instance.GetTrophyCount(clientId);
-
-            nameText.text = playerName;
-            trophyText.text = $"🏆 {trophyCount}";
-
-            if (GameState.Instance.CurrentPlayerId == clientId)
-                nameText.color = Color.yellow;
-            else
-                nameText.color = Color.white;
-        }
-    }
-
 
     // ============================================================
     // ⚔️ SKILL SYSTEM (RESTORED)

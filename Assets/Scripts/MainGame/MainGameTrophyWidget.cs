@@ -52,13 +52,18 @@ public class MainGameTrophyWidget : MonoBehaviour
         {
             if (GameState.Instance != null)
             {
-                // ✅ Call AddTrophyServerRpc (moves player to last)
                 GameState.Instance.AddTrophyServerRpc(myClientId);
+
+                // Immediate local refresh (clients only)
+                if (!NetworkManager.Singleton.IsServer)
+                    GameState.NotifyTurnOrderChanged();
+
                 Debug.Log($"[TrophyWidget] Player {myClientId} added a star!");
             }
 
             confirmationPopupPanel.SetActive(false);
         });
+
 
         noButton.onClick.AddListener(() =>
         {
