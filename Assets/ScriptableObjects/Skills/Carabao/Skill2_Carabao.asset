@@ -64,4 +64,4 @@ MonoBehaviour:
     m_RotationOrder: 4
   textMoveDistance: 200
   textScaleFactor: 1.2
-  totalDuration: 3
+  totalDuration: 5
