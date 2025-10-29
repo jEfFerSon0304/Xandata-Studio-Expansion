@@ -1,5 +1,7 @@
+using TMPro;
 using UnityEngine;
 
+[System.Serializable]
 [CreateAssetMenu(fileName = "SkillAnimation", menuName = "Game/Skill Animation Data")]
 public class SkillAnimationSO : ScriptableObject
 {
@@ -28,6 +30,35 @@ public class SkillAnimationSO : ScriptableObject
     public bool shakeMainImage = true;
     public float shakeIntensity = 10f;
     public float shakeDuration = 0.4f; // how long the shake lasts
+
+    [Header("Text Animation Style")]
+    public SkillTextAnimator textAnimator = new SkillTextAnimator();
+
+    [Header("Text Style (Per Skill Animation)")]
+    public TMP_FontAsset skillFont;
+    public Color skillTextColor = Color.white;
+
+    public enum SkillTextEffectType
+    {
+        None,
+        FadeIn,
+        SlideFromLeft,
+        SlideFromRight,
+        SlideUp,
+        SlideDown,
+        Bounce,
+        Wave,
+        Flip,
+        Impact,
+        Pop
+    }
+
+    [Header("Custom Text Behavior")]
+    public SkillTextEffectType textEffect = SkillTextEffectType.FadeIn;
+    public AnimationCurve customCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
+    public float textMoveDistance = 200f;
+    public float textScaleFactor = 1.2f;
+
 
 
     [Header("Timing")]

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Tarsier
   m_EditorClassIdentifier: Assembly-CSharp::CharacterDataSO
   characterName: Tarsier
-  portrait: {fileID: 21300000, guid: 4ed91e768ab1d9046b8f8a9287f4d8ac, type: 3}
+  portrait: {fileID: 21300000, guid: 1b997e8bba598ab449444348b14bda1b, type: 3}
   skills:
   - skillName: Quick Leap
     description: Jump 4 tiles forward, even onto an occupied tile.
@@ -28,14 +28,14 @@ MonoBehaviour:
     isUltimate: 0
     skillIcon: {fileID: 21300000, guid: 71a62171476086b49ad0b0f8ebc1eea2, type: 3}
     requiresTarget: 1
-    animationData: {fileID: 0}
+    animationData: {fileID: 11400000, guid: 3c45490e1fe533e4980db328d7b774aa, type: 2}
   - skillName: Mind Trick
     description: Swap positions with any player on the board.
     energyCost: 3
     isUltimate: 1
     skillIcon: {fileID: 21300000, guid: 6955a6c37b31c0144bf510c9adaa43de, type: 3}
     requiresTarget: 1
-    animationData: {fileID: 0}
+    animationData: {fileID: 11400000, guid: 1be6d95436410054c9ad4cc1d48461fe, type: 2}
   themeColor: {r: 1, g: 1, b: 1, a: 1}
   description: 
   characterPrefab: {fileID: 0}

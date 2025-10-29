@@ -71,26 +71,27 @@ public class PlayerNetwork : NetworkBehaviour
         if (SelectedCharacterIndex.Value < 0)
             SelectedCharacterIndex.Value = SlotIndex.Value % db.allCharacters.Length;
 
-        // ✅ Register character assignment in the shared GameDatabase
-        // After registering character
+        // Register character assignment in the shared GameDatabase (server-side)
         GameDatabase.Instance.SetCharacter(OwnerClientId, SelectedCharacterIndex.Value);
-        UpdateCharacterClientRpc(OwnerClientId, SelectedCharacterIndex.Value);
 
+        // Broadcast authoritative assignment to all clients / or targeted clients
         SyncCharacterToClientsClientRpc(OwnerClientId, SelectedCharacterIndex.Value);
-
 
         IsReady.Value = false;
         Debug.Log($"[ASSIGN] Player {OwnerClientId} | Slot {SlotIndex.Value} | Character {SelectedCharacterIndex.Value}");
         PlayerNetwork.NotifyUpdate();
     }
 
+    // Single unified client RPC for syncing character assignments (can be broadcast or targeted)
     [ClientRpc]
-    void UpdateCharacterClientRpc(ulong clientId, int charIndex)
+    void SyncCharacterToClientsClientRpc(ulong clientId, int characterIndex, ClientRpcParams rpcParams = default)
     {
         if (GameDatabase.Instance != null)
-            GameDatabase.Instance.SetCharacter(clientId, charIndex);
+        {
+            GameDatabase.Instance.SetCharacter(clientId, characterIndex);
+            Debug.Log($"[Sync] Client received character {characterIndex} for player {clientId}");
+        }
     }
-
 
     public static void NotifyUpdate() =>
         OnAnyStateChanged?.Invoke();
@@ -124,16 +125,7 @@ public class PlayerNetwork : NetworkBehaviour
         }
     }
 
-    [ClientRpc]
-    void SyncCharacterToClientsClientRpc(ulong clientId, int characterIndex)
-    {
-        if (GameDatabase.Instance != null)
-        {
-            GameDatabase.Instance.SetCharacter(clientId, characterIndex);
-            Debug.Log($"[Sync] Client received character {characterIndex} for player {clientId}");
-        }
-    }
-
+    // Client can request character sync; server will send authoritative data back targeted to requester
     [ServerRpc(RequireOwnership = false)]
     public void RequestCharacterSyncServerRpc(ServerRpcParams rpcParams = default)
     {
@@ -142,19 +134,9 @@ public class PlayerNetwork : NetworkBehaviour
 
         foreach (var pn in FindObjectsByType<PlayerNetwork>(FindObjectsSortMode.None))
         {
+            // Target only the requesting client
             SyncCharacterToClientsClientRpc(pn.OwnerClientId, pn.SelectedCharacterIndex.Value,
                 new ClientRpcParams { Send = new ClientRpcSendParams { TargetClientIds = new[] { senderId } } });
         }
     }
-
-    [ClientRpc]
-    void SyncCharacterToClientsClientRpc(ulong clientId, int characterIndex, ClientRpcParams rpcParams = default)
-    {
-        if (GameDatabase.Instance != null)
-        {
-            GameDatabase.Instance.SetCharacter(clientId, characterIndex);
-            Debug.Log($"[Sync] Client received character {characterIndex} for player {clientId}");
-        }
-    }
-
 }

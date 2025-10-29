@@ -176,6 +176,8 @@ public class MainGameManager : NetworkBehaviour
         if (targetClientId != ulong.MaxValue)
             NotifyAttackClientRpc(targetClientId, attackerName, skillName);
 
+        PlaySkillAnimationClientRpc(skillName);
+
         // 🧠 Example: Carabao Ground Slam (stun)
         if (skillName == "Ground Slam" && targetClientId != ulong.MaxValue)
         {
@@ -203,6 +205,29 @@ public class MainGameManager : NetworkBehaviour
             }
         }
     }
+
+    [ClientRpc]
+    void PlaySkillAnimationClientRpc(string skillName)
+    {
+        // Find the animation data by skill name
+        var allChars = GameDatabase.Instance.allCharacters;
+        foreach (var ch in allChars)
+        {
+            foreach (var sk in ch.skills)
+            {
+                if (sk.skillName == skillName)
+                {
+                    var revealUI = FindFirstObjectByType<SkillRevealUI>(FindObjectsInactive.Include);
+                    if (revealUI != null)
+                        revealUI.ShowSkill(sk);
+                    return;
+                }
+            }
+        }
+
+        Debug.LogWarning($"[SkillAnimation] No skill animation data found for: {skillName}");
+    }
+
 
     private PlayerNetwork FindPlayerNetwork(ulong clientId)
     {
