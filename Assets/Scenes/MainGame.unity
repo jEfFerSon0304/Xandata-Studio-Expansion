@@ -2510,8 +2510,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Turn Order
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 08b8220f331b42243b050785c7d1e87d, type: 2}
-  m_sharedMaterial: {fileID: -8779917502838172083, guid: 08b8220f331b42243b050785c7d1e87d, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
