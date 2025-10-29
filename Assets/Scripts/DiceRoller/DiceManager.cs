@@ -197,6 +197,7 @@ public class DiceManager : NetworkBehaviour
 
     IEnumerator FadeInOrderPopup()
     {
+        if (orderPopupGroup == null) yield break;
         orderPopupGroup.alpha = 0;
         float t = 0;
         while (t < 1f)
@@ -291,11 +292,17 @@ public class DiceManager : NetworkBehaviour
             results.TryGetValue(id, out var roll);
             finalRanks.TryGetValue(id, out var rank);
 
+            // New: include authoritative character index if GameDatabase has it
+            int charIndex = -1;
+            if (GameDatabase.Instance != null && GameDatabase.Instance.chosenCharacters.TryGetValue(id, out var idx))
+                charIndex = idx;
+
             return new PlayerState
             {
                 clientId = id,
                 rollValue = roll,
                 rank = rank,
+                characterIndex = charIndex,
                 r = col.r,
                 g = col.g,
                 b = col.b,
@@ -315,6 +322,10 @@ public class DiceManager : NetworkBehaviour
             playerColors[p.clientId] = new Color(p.r, p.g, p.b, p.a);
             if (p.rollValue > 0) results[p.clientId] = p.rollValue;
             if (p.rank > 0) finalRanks[p.clientId] = p.rank;
+
+            // NEW: apply received characterIndex into GameDatabase so UI can show names immediately
+            if (p.characterIndex >= 0 && GameDatabase.Instance != null)
+                GameDatabase.Instance.SetCharacter(p.clientId, p.characterIndex);
 
             var dice = FindObjectsByType<DiceRoller>(FindObjectsSortMode.None)
                        .FirstOrDefault(d => d.OwnerClientId == p.clientId);
@@ -337,6 +348,14 @@ public class DiceManager : NetworkBehaviour
     private void UpdateLocalUI()
     {
         ulong me = NetworkManager.Singleton.LocalClientId;
+
+        // Defensive: if local GameDatabase is missing my character, request sync from server
+        if (!IsServer && GameDatabase.Instance != null && GameDatabase.Instance.GetCharacterData(me) == null)
+        {
+            var myPlayer = PlayerNetwork.LocalPlayer;
+            if (myPlayer != null)
+                myPlayer.RequestCharacterSyncServerRpc();
+        }
 
         infoText.text =
             "Your Dice: " + (playerColors.TryGetValue(me, out var col) ? ColorToName(col) : "N/A") + "\n" +
@@ -405,6 +424,7 @@ public class DiceManager : NetworkBehaviour
         public ulong clientId;
         public int rollValue;
         public int rank;
+        public int characterIndex; // NEW
         public float r, g, b, a;
 
         public void NetworkSerialize<T>(BufferSerializer<T> s) where T : IReaderWriter
@@ -412,6 +432,7 @@ public class DiceManager : NetworkBehaviour
             s.SerializeValue(ref clientId);
             s.SerializeValue(ref rollValue);
             s.SerializeValue(ref rank);
+            s.SerializeValue(ref characterIndex); // NEW
             s.SerializeValue(ref r);
             s.SerializeValue(ref g);
             s.SerializeValue(ref b);

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Eagle
   m_EditorClassIdentifier: Assembly-CSharp::CharacterDataSO
   characterName: Eagle
-  portrait: {fileID: 21300000, guid: db3c14f00ab45a94ab20c4a65e5455be, type: 3}
+  portrait: {fileID: 21300000, guid: 8e6b2d54eb5aaae42a79251be348393d, type: 3}
   skills:
   - skillName: Dive Forward
     description: Move 4 tiles forward, ignoring traps.
@@ -21,18 +21,21 @@ MonoBehaviour:
     isUltimate: 0
     skillIcon: {fileID: 0}
     requiresTarget: 0
+    animationData: {fileID: 0}
   - skillName: Gust of Wind
     description: Choose one player and push them back 3 tiles.
     energyCost: 2
     isUltimate: 0
     skillIcon: {fileID: 0}
     requiresTarget: 1
+    animationData: {fileID: 0}
   - skillName: Sky Soar
     description: Teleport up to 10 tiles ahead to any visible tile on the board.
     energyCost: 3
     isUltimate: 1
     skillIcon: {fileID: 0}
     requiresTarget: 0
+    animationData: {fileID: 0}
   themeColor: {r: 1, g: 1, b: 1, a: 1}
   description: 
   characterPrefab: {fileID: 0}

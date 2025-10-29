@@ -13,9 +13,11 @@ public class TargetSelectionUI : MonoBehaviour
     public GameObject panelRoot;            // main background panel (Image)
     public Button cancelButton; // 👈 NEW
     public TargetSelectionUI targetSelectionUI;
+    public GameObject targetUIPanel;
 
     private MainGameManager manager;
     private CharacterDataSO.SkillData pendingSkill;
+
 
     private void Awake()
     {
@@ -137,6 +139,7 @@ public class TargetSelectionUI : MonoBehaviour
         // ✅ Also hide the whole object
         gameObject.SetActive(false);
         targetSelectionUI.gameObject.SetActive(false);
+        targetUIPanel.gameObject.SetActive(false);
     }
 
 }

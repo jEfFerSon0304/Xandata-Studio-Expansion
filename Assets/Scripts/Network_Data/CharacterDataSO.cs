@@ -30,5 +30,8 @@ public class CharacterDataSO : ScriptableObject
 
         [Header("Target Settings")]
         public bool requiresTarget; // ✅ NEW FIELD — Does this skill need a target?
+
+        [Header("Reveal Animation Settings")]
+        public SkillAnimationSO animationData;
     }
 }

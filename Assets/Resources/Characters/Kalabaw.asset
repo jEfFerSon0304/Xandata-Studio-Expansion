@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Kalabaw
   m_EditorClassIdentifier: Assembly-CSharp::CharacterDataSO
   characterName: Kalabaw
-  portrait: {fileID: 21300000, guid: bfcd84e4eb5bc2342a4dfbc62852560e, type: 3}
+  portrait: {fileID: 21300000, guid: e88611a083dd4f44790e964db823cf3b, type: 3}
   skills:
   - skillName: Heavy Charge
     description: Move 4 tiles forward and ignore any obstacle you pass.
@@ -21,12 +21,14 @@ MonoBehaviour:
     isUltimate: 0
     skillIcon: {fileID: 21300000, guid: 338da22771d0cdf479286d0f21043ff1, type: 3}
     requiresTarget: 0
+    animationData: {fileID: 11400000, guid: 4a5b4ce9a49914645ae496192154d40a, type: 2}
   - skillName: Ground Slam
     description: "Choose one player \u2014 they skip their next turn (stunned)."
     energyCost: 2
     isUltimate: 0
     skillIcon: {fileID: 21300000, guid: 51a67925a7402a14295227f089079540, type: 3}
     requiresTarget: 1
+    animationData: {fileID: 11400000, guid: ae43158fe618e4045a1e799314d02d67, type: 2}
   - skillName: Stampede
     description: "Rush 6 tiles forward, knocking away any player you pass \u2014
       they move 3 tiles backward."
@@ -34,6 +36,7 @@ MonoBehaviour:
     isUltimate: 1
     skillIcon: {fileID: 21300000, guid: c08351c24ba475a42a587272c0f0b0bc, type: 3}
     requiresTarget: 0
+    animationData: {fileID: 11400000, guid: 3a939bbd2b7ac4f43bdcbc8327b4675e, type: 2}
   themeColor: {r: 1, g: 1, b: 1, a: 1}
   description: 
   characterPrefab: {fileID: 0}

@@ -24,6 +24,9 @@ public class MainGameManager : NetworkBehaviour
     public TargetSelectionUI targetSelectionUI;
     public GameObject attackPopupPrefab;
 
+    [Header("Skill Reveal UI")]
+    public SkillRevealUI skillRevealUI;
+
     private CharacterDataSO myCharacter;
     private int energy = 5;
     private bool initialized = false;
@@ -158,6 +161,8 @@ public class MainGameManager : NetworkBehaviour
         energy -= skill.energyCost;
         UpdateUI();
 
+        skillRevealUI.ShowSkill(skill);
+
         RequestSkillUseServerRpc(skill.skillName, targetClientId);
     }
 
@@ -170,6 +175,8 @@ public class MainGameManager : NetworkBehaviour
         // 💬 Notify target
         if (targetClientId != ulong.MaxValue)
             NotifyAttackClientRpc(targetClientId, attackerName, skillName);
+
+        PlaySkillAnimationClientRpc(skillName);
 
         // 🧠 Example: Carabao Ground Slam (stun)
         if (skillName == "Ground Slam" && targetClientId != ulong.MaxValue)
@@ -198,6 +205,29 @@ public class MainGameManager : NetworkBehaviour
             }
         }
     }
+
+    [ClientRpc]
+    void PlaySkillAnimationClientRpc(string skillName)
+    {
+        // Find the animation data by skill name
+        var allChars = GameDatabase.Instance.allCharacters;
+        foreach (var ch in allChars)
+        {
+            foreach (var sk in ch.skills)
+            {
+                if (sk.skillName == skillName)
+                {
+                    var revealUI = FindFirstObjectByType<SkillRevealUI>(FindObjectsInactive.Include);
+                    if (revealUI != null)
+                        revealUI.ShowSkill(sk);
+                    return;
+                }
+            }
+        }
+
+        Debug.LogWarning($"[SkillAnimation] No skill animation data found for: {skillName}");
+    }
+
 
     private PlayerNetwork FindPlayerNetwork(ulong clientId)
     {

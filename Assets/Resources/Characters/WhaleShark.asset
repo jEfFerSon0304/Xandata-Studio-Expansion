@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: WhaleShark
   m_EditorClassIdentifier: Assembly-CSharp::CharacterDataSO
   characterName: WhaleShark
-  portrait: {fileID: 21300000, guid: 8d6f8bf225886e44caf2748f0da7368a, type: 3}
+  portrait: {fileID: 21300000, guid: 45b459372d408f5489c3a5a3099fe0c7, type: 3}
   skills:
   - skillName: Swim
     description: Move 4 tiles forward, ignoring traps or water penalties.
@@ -21,6 +21,7 @@ MonoBehaviour:
     isUltimate: 0
     skillIcon: {fileID: 0}
     requiresTarget: 0
+    animationData: {fileID: 0}
   - skillName: Bubble Trap
     description: "Choose one player \u2014 they can\u2019t use any powerups on their
       next turn."
@@ -28,6 +29,7 @@ MonoBehaviour:
     isUltimate: 0
     skillIcon: {fileID: 0}
     requiresTarget: 1
+    animationData: {fileID: 0}
   - skillName: Tidal Reversal
     description: Swim 5 tiles forward. Reverse the movement direction of all opponents
       for one full round (they move backward on their next roll)
@@ -35,6 +37,7 @@ MonoBehaviour:
     isUltimate: 1
     skillIcon: {fileID: 0}
     requiresTarget: 0
+    animationData: {fileID: 0}
   themeColor: {r: 1, g: 1, b: 1, a: 1}
   description: 
   characterPrefab: {fileID: 0}
