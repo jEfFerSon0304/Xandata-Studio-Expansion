@@ -23,7 +23,9 @@ MonoBehaviour:
   textFadeInDuration: 0.5
   textStayDuration: 1.5
   skillSFX: {fileID: 0}
-  backgroundTint: {r: 0.16197936, g: 0.1915879, b: 0.3773585, a: 1}
-  shakeIntensity: 6
+  backgroundTint: {r: 0.16197936, g: 0.1915879, b: 0.3773585, a: 0.6745098}
   showTapToContinue: 1
+  shakeMainImage: 1
+  shakeIntensity: 15
+  shakeDuration: 2
   totalDuration: 3

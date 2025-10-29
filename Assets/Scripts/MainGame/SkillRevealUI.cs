@@ -14,7 +14,14 @@ public class SkillRevealUI : MonoBehaviour
     public TextMeshProUGUI skillDescText;
     public TextMeshProUGUI tapToContinueText;
 
+    private Vector3 originalBgPos;
     private bool waitingForTap;
+
+    private void Awake()
+    {
+        if (backgroundImage != null)
+            originalBgPos = backgroundImage.rectTransform.localPosition;
+    }
 
     public void ShowSkill(CharacterDataSO.SkillData data)
     {
@@ -55,6 +62,7 @@ public class SkillRevealUI : MonoBehaviour
         {
             t += Time.deltaTime;
             background.alpha = Mathf.Lerp(0, 1, t / anim.fadeDuration);
+            //ApplyShake(anim.shakeIntensity * 0.5f);
             yield return null;
         }
 
@@ -66,12 +74,16 @@ public class SkillRevealUI : MonoBehaviour
             t += Time.deltaTime;
             float a = t / 0.3f;
             mainImage.color = new Color(1, 1, 1, a);
+            //ApplyShake(anim.shakeIntensity, anim.shakeMainImage);
             yield return null;
         }
 
         // 3️⃣ Play SFX
         if (anim.skillSFX)
             AudioSource.PlayClipAtPoint(anim.skillSFX, Camera.main.transform.position);
+
+        StartCoroutine(ShakeRoutine(anim.shakeIntensity, anim.shakeDuration, anim.shakeMainImage));
+
 
         // 4️⃣ Fade in text
         yield return new WaitForSeconds(anim.textFadeInDelay);
@@ -82,6 +94,7 @@ public class SkillRevealUI : MonoBehaviour
             float a = t / anim.textFadeInDuration;
             skillNameText.alpha = a;
             skillDescText.alpha = a;
+            //ApplyShake(anim.shakeIntensity * 0.3f);
             yield return null;
         }
 
@@ -93,7 +106,7 @@ public class SkillRevealUI : MonoBehaviour
             waitingForTap = true;
         }
 
-        // 6️⃣ Wait for player tap (supports new Input System)
+        // 6️⃣ Wait for player tap (new Input System)
         yield return new WaitUntil(() => Mouse.current.leftButton.wasPressedThisFrame);
 
         // 7️⃣ Fade out everything smoothly
@@ -108,6 +121,7 @@ public class SkillRevealUI : MonoBehaviour
             skillNameText.alpha = a;
             skillDescText.alpha = a;
             tapToContinueText.alpha = a;
+            //ApplyShake(anim.shakeIntensity * 0.4f);
             yield return null;
         }
 
@@ -118,5 +132,64 @@ public class SkillRevealUI : MonoBehaviour
         skillDescText.alpha = 0;
         tapToContinueText.alpha = 0;
         tapToContinueText.gameObject.SetActive(false);
+        backgroundImage.rectTransform.localPosition = originalBgPos;
+        mainImage.rectTransform.localPosition = Vector3.zero;
     }
+
+    //private void ApplyShake(float intensity, bool shakeMainImage = true)
+    //{
+    //    if (intensity <= 0f) return;
+
+    //    Vector3 offset = new Vector3(
+    //        Random.Range(-intensity, intensity),
+    //        Random.Range(-intensity, intensity),
+    //        0f
+    //    );
+
+    //    // 🌀 Shake the main image for a more dynamic effect
+    //    if (shakeMainImage && mainImage != null)
+    //        mainImage.rectTransform.localPosition = originalBgPos + offset;
+    //    else if (backgroundImage != null)
+    //        backgroundImage.rectTransform.localPosition = originalBgPos + offset;
+    //}
+
+    private IEnumerator ShakeRoutine(float intensity, float duration, bool shakeMainImage)
+    {
+        if (intensity <= 0f || duration <= 0f) yield break;
+
+        float timer = 0f;
+        Vector3 mainOriginal = mainImage.rectTransform.localPosition;
+        Vector3 bgOriginal = backgroundImage.rectTransform.localPosition;
+
+        while (timer < duration)
+        {
+            timer += Time.deltaTime;
+
+            // 👇 Gradually reduce shake intensity as time passes
+            float normalized = timer / duration;
+            float currentIntensity = Mathf.Lerp(intensity, 0f, Mathf.SmoothStep(0f, 1f, normalized));
+
+            Vector3 offset = new Vector3(
+                Random.Range(-currentIntensity, currentIntensity),
+                Random.Range(-currentIntensity, currentIntensity),
+                0f
+            );
+
+            if (shakeMainImage && mainImage != null)
+                mainImage.rectTransform.localPosition = mainOriginal + offset;
+            else if (backgroundImage != null)
+                backgroundImage.rectTransform.localPosition = bgOriginal + offset;
+
+            yield return null;
+        }
+
+        // ✅ Reset positions after shaking ends
+        if (mainImage != null)
+            mainImage.rectTransform.localPosition = mainOriginal;
+        if (backgroundImage != null)
+            backgroundImage.rectTransform.localPosition = bgOriginal;
+    }
+
+
+
 }

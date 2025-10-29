@@ -22,8 +22,13 @@ public class SkillAnimationSO : ScriptableObject
 
     [Header("Color & Effects")]
     public Color backgroundTint = Color.black;
-    public float shakeIntensity = 10f;
     public bool showTapToContinue = true;
+
+    [Header("Shake Settings")]
+    public bool shakeMainImage = true;
+    public float shakeIntensity = 10f;
+    public float shakeDuration = 0.4f; // how long the shake lasts
+
 
     [Header("Timing")]
     public float totalDuration = 3f; // overall animation time
