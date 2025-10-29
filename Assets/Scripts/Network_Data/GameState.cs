@@ -1,7 +1,8 @@
-﻿using UnityEngine;
-using Unity.Netcode;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Netcode;
+using UnityEngine;
 
 public class GameState : NetworkBehaviour
 {
@@ -12,6 +13,8 @@ public class GameState : NetworkBehaviour
 
     // 🏆 Trophy tracking
     private Dictionary<ulong, int> trophies = new();
+    private List<ulong> cachedTurnOrder = new();
+
 
     public delegate void TurnOrderChanged();
     public static event TurnOrderChanged OnTurnOrderChangedEvent;
@@ -84,8 +87,15 @@ public class GameState : NetworkBehaviour
         MovePlayerToLast(clientId);
         Debug.Log($"[Trophy] Player {clientId} gained a trophy! Total: {trophies[clientId]}");
 
+        StartCoroutine(SendSyncDelayed()); // 👈 safer sync
+    }
+
+    private IEnumerator SendSyncDelayed()
+    {
+        yield return new WaitForSeconds(0.1f);
         SyncTurnOrderClientRpc(BuildTurnStateArray());
     }
+
 
     [ServerRpc(RequireOwnership = false)]
     public void RemoveTrophyServerRpc(ulong clientId)
@@ -114,19 +124,43 @@ public class GameState : NetworkBehaviour
     [ClientRpc]
     private void SyncTurnOrderClientRpc(TurnState[] data)
     {
-        if (!IsOwner)
-        {
-            turnOrder.Clear();
-            foreach (var t in data)
-                turnOrder.Add(t.clientId);
+        // 🧩 DO NOT skip host — it’s both server & client
+        cachedTurnOrder.Clear();
+        foreach (var t in data)
+            cachedTurnOrder.Add(t.clientId);
 
-            trophies.Clear();
-            foreach (var t in data)
-                trophies[t.clientId] = t.trophyCount;
-        }
+        trophies.Clear();
+        foreach (var t in data)
+            trophies[t.clientId] = t.trophyCount;
+
+        Debug.Log($"[SyncTurnOrderClientRpc] Updated cached turn order: {string.Join(", ", cachedTurnOrder)}");
 
         OnTurnOrderChangedEvent?.Invoke();
     }
+
+
+    public IEnumerable<ulong> GetCurrentTurnOrder()
+    {
+        if (IsServer)
+        {
+            // Manually copy items from NetworkList to a normal list
+            List<ulong> result = new List<ulong>();
+            for (int i = 0; i < turnOrder.Count; i++)
+            {
+                result.Add(turnOrder[i]);
+            }
+            return result;
+        }
+        else
+        {
+            return cachedTurnOrder;
+        }
+    }
+
+
+
+
+
 
     private TurnState[] BuildTurnStateArray()
     {

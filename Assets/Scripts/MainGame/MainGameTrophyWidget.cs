@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Unity.Netcode;
@@ -42,7 +42,7 @@ public class MainGameTrophyWidget : MonoBehaviour
 
     void OnAddTrophyClicked()
     {
-        confirmationMessage.text = "Are you sure you want to add a trophy?";
+        confirmationMessage.text = "Are you sure you want to add a star?";
         confirmationPopupPanel.SetActive(true);
 
         yesButton.onClick.RemoveAllListeners();
@@ -52,9 +52,11 @@ public class MainGameTrophyWidget : MonoBehaviour
         {
             if (GameState.Instance != null)
             {
+                // ✅ Call AddTrophyServerRpc (moves player to last)
                 GameState.Instance.AddTrophyServerRpc(myClientId);
-                Debug.Log($"[TrophyWidget] Player {myClientId} added a trophy!");
+                Debug.Log($"[TrophyWidget] Player {myClientId} added a star!");
             }
+
             confirmationPopupPanel.SetActive(false);
         });
 
@@ -68,8 +70,9 @@ public class MainGameTrophyWidget : MonoBehaviour
     {
         if (GameState.Instance != null)
         {
+            // 🚫 Only removes a star, does not move turn order
             GameState.Instance.RemoveTrophyServerRpc(myClientId);
-            Debug.Log($"[TrophyWidget] Player {myClientId} removed a trophy!");
+            Debug.Log($"[TrophyWidget] Player {myClientId} removed a star!");
         }
     }
 
@@ -78,6 +81,6 @@ public class MainGameTrophyWidget : MonoBehaviour
         if (GameState.Instance == null) return;
 
         int count = GameState.Instance.GetTrophyCount(myClientId);
-        trophyCountText.text = count.ToString();
+        trophyCountText.text = $"⭐ {count}";
     }
 }

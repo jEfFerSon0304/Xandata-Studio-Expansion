@@ -99,21 +99,63 @@ public class MainGameManager : NetworkBehaviour
         endTurnButton.interactable = myTurn;
     }
 
-
+    // ============================================================
+    // 🧩 TURN ORDER DISPLAY
+    // ============================================================
     void RefreshTurnOrderUI()
     {
-        if (GameState.Instance == null || turnOrderPanel == null) return;
-
-        foreach (Transform child in turnOrderPanel)
-            Destroy(child.gameObject);
-
-        foreach (var clientId in GameState.Instance.turnOrder)
+        // ✅ Safety checks to avoid null/destroyed refs
+        if (GameState.Instance == null)
         {
-            var entry = Instantiate(turnOrderEntryPrefab, turnOrderPanel);
-            var nameText = entry.transform.Find("NameText").GetComponent<TMP_Text>();
-            var trophyText = entry.transform.Find("TrophyText").GetComponent<TMP_Text>();
+            Debug.LogWarning("[TurnOrderUI] GameState missing, skipping refresh.");
+            return;
+        }
 
-            string playerName = GameDatabase.Instance.GetCharacterName(clientId);
+        if (this == null || gameObject == null)
+        {
+            Debug.LogWarning("[TurnOrderUI] MainGameManager destroyed, skipping refresh.");
+            return;
+        }
+
+        if (turnOrderPanel == null || turnOrderEntryPrefab == null)
+        {
+            Debug.LogWarning("[TurnOrderUI] UI references missing, skipping refresh.");
+            return;
+        }
+
+        // In case the prefab was destroyed due to scene reload or RPC timing
+        if (turnOrderEntryPrefab.Equals(null))
+        {
+            Debug.LogWarning("[TurnOrderUI] Turn order entry prefab is invalid (destroyed).");
+            return;
+        }
+
+        // ✅ Destroy old list safely
+        foreach (Transform child in turnOrderPanel)
+        {
+            if (child != null)
+                Destroy(child.gameObject);
+        }
+
+        // ✅ Rebuild UI
+        foreach (var clientId in GameState.Instance.GetCurrentTurnOrder())
+        {
+            // Skip if prefab was unloaded or invalid
+            if (turnOrderEntryPrefab == null) break;
+
+            var entry = Instantiate(turnOrderEntryPrefab, turnOrderPanel);
+            if (entry == null) continue;
+
+            TMP_Text nameText = entry.transform.Find("NameText")?.GetComponent<TMP_Text>();
+            TMP_Text trophyText = entry.transform.Find("TrophyText")?.GetComponent<TMP_Text>();
+
+            if (nameText == null || trophyText == null)
+            {
+                Debug.LogWarning("[TurnOrderUI] Missing NameText/TrophyText in prefab.");
+                continue;
+            }
+
+            string playerName = GameDatabase.Instance?.GetCharacterName(clientId) ?? $"Player {clientId}";
             int trophyCount = GameState.Instance.GetTrophyCount(clientId);
 
             nameText.text = playerName;
@@ -126,5 +168,178 @@ public class MainGameManager : NetworkBehaviour
         }
     }
 
-    // (The rest of your MainGameManager code is unchanged)
+
+    // ============================================================
+    // ⚔️ SKILL SYSTEM (RESTORED)
+    // ============================================================
+
+    public void TryUseSkill(CharacterDataSO.SkillData skill)
+    {
+        Debug.Log($"[Skill] Trying to use: {skill.skillName} | Requires target: {skill.requiresTarget}");
+
+        // ⚡ Energy check
+        if (skill.energyCost > energy)
+        {
+            feedbackText.text = "⚡ Not enough energy!";
+            return;
+        }
+
+        // 🎯 If requires target → open popup (local only!)
+        if (skill.requiresTarget)
+        {
+            targetSelectionUI.gameObject.SetActive(true);
+            targetSelectionUI.Open(this, skill);
+            return;
+        }
+
+        // ⚡ Otherwise execute immediately
+        ExecuteSkill(skill, ulong.MaxValue);
+    }
+
+    public void OnTargetSelected(CharacterDataSO.SkillData skill, ulong targetClientId)
+    {
+        energy -= skill.energyCost;
+        UpdateUI();
+
+        RequestSkillUseServerRpc(skill.skillName, targetClientId);
+    }
+
+    public void ExecuteSkill(CharacterDataSO.SkillData skill, ulong targetClientId)
+    {
+        energy -= skill.energyCost;
+        UpdateUI();
+
+        RequestSkillUseServerRpc(skill.skillName, targetClientId);
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    void RequestSkillUseServerRpc(string skillName, ulong targetClientId, ServerRpcParams rpcParams = default)
+    {
+        ulong senderId = rpcParams.Receive.SenderClientId;
+        string attackerName = GameDatabase.Instance.GetCharacterName(senderId);
+
+        // 💬 Notify target
+        if (targetClientId != ulong.MaxValue)
+            NotifyAttackClientRpc(targetClientId, attackerName, skillName);
+
+        // 🧠 Example: Carabao Ground Slam (stun)
+        if (skillName == "Ground Slam" && targetClientId != ulong.MaxValue)
+        {
+            var target = FindPlayerNetwork(targetClientId);
+            if (target != null)
+            {
+                target.isStunned.Value = true;
+                Debug.Log($"[Effect] Player {targetClientId} stunned by Ground Slam!");
+            }
+        }
+    }
+
+    [ClientRpc]
+    void NotifyAttackClientRpc(ulong targetClientId, string attackerName, string skillName)
+    {
+        if (NetworkManager.Singleton.LocalClientId == targetClientId)
+        {
+            feedbackText.text = $"💥 {attackerName} used {skillName} on you!";
+
+            if (attackPopupPrefab != null)
+            {
+                var popup = Instantiate(attackPopupPrefab, transform);
+                popup.GetComponentInChildren<TMP_Text>().text = $"{attackerName} attacked with {skillName}!";
+                Destroy(popup, 3f);
+            }
+        }
+    }
+
+    private PlayerNetwork FindPlayerNetwork(ulong clientId)
+    {
+        foreach (var pn in FindObjectsByType<PlayerNetwork>(FindObjectsSortMode.None))
+            if (pn.OwnerClientId == clientId)
+                return pn;
+        return null;
+    }
+
+    // ============================================================
+    // 🕹️ END TURN SYSTEM (unchanged)
+    // ============================================================
+
+    public void EndTurn()
+    {
+        if (!IsServer)
+        {
+            RequestEndTurnServerRpc();
+            return;
+        }
+
+        HandleNextTurn();
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    void RequestEndTurnServerRpc(ServerRpcParams rpcParams = default)
+    {
+        ulong senderId = rpcParams.Receive.SenderClientId;
+        if (GameState.Instance.CurrentPlayerId != senderId)
+        {
+            SendFeedbackClientRpc(senderId, "⛔ Not your turn!");
+            return;
+        }
+
+        HandleNextTurn();
+    }
+
+    private void HandleNextTurn()
+    {
+        var gs = GameState.Instance;
+        if (gs == null || gs.turnOrder.Count == 0)
+            return;
+
+        gs.AdvanceTurn(); // ✅ skip stunned logic handled here
+
+        // ✅ Full round = +1 energy for everyone
+        if (gs.currentTurnIndex.Value == 0)
+        {
+            foreach (var clientId in gs.turnOrder)
+                RestoreEnergyClientRpc(clientId);
+        }
+
+        UpdateAllClientsUIClientRpc();
+    }
+
+    [ClientRpc]
+    void RestoreEnergyClientRpc(ulong targetClientId)
+    {
+        if (NetworkManager.Singleton.LocalClientId == targetClientId)
+        {
+            energy = Mathf.Min(5, energy + 1);
+            energyText.text = $"Energy: {energy}/5";
+            feedbackText.text = "⚡ +1 Energy!";
+        }
+    }
+
+    [ClientRpc]
+    void UpdateAllClientsUIClientRpc()
+    {
+        if (GameState.Instance == null) return;
+
+        ulong myId = NetworkManager.Singleton.LocalClientId;
+        bool myTurn = (GameState.Instance.CurrentPlayerId == myId);
+
+        headerText.text = myTurn
+            ? $"{myCharacter.characterName}'s Turn!"
+            : "Waiting for your turn...";
+
+        endTurnButton.interactable = myTurn;
+    }
+
+    [ClientRpc]
+    void SendFeedbackClientRpc(ulong targetClientId, string message)
+    {
+        if (NetworkManager.Singleton.LocalClientId == targetClientId)
+            feedbackText.text = message;
+    }
+
+    void Update()
+    {
+        if (initialized)
+            UpdateUI();
+    }
 }
