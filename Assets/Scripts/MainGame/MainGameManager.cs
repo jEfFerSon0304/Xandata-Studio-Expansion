@@ -27,6 +27,13 @@ public class MainGameManager : NetworkBehaviour
     [Header("Skill Reveal UI")]
     public SkillRevealUI skillRevealUI;
 
+    [Header("Energy UI (Icons)")]
+    public Transform energyPanel;        // assign the parent panel
+    public Sprite energyFilledSprite;    // 🟡 sprite
+    public Sprite energyEmptySprite;     // ⚪ sprite
+    private Image[] energySlots;
+
+
     private CharacterDataSO myCharacter;
     private int energy = 5;
     private bool initialized = false;
@@ -75,6 +82,10 @@ public class MainGameManager : NetworkBehaviour
             });
         }
 
+        // Cache references to energy slot images
+        if (energyPanel != null)
+            energySlots = energyPanel.GetComponentsInChildren<Image>();
+
 
         initialized = true;
     }
@@ -117,7 +128,7 @@ public class MainGameManager : NetworkBehaviour
             ? $"{myCharacter.characterName}'s Turn!"
             : "Waiting for your turn...";
 
-        energyText.text = $"Energy: {energy}/5";
+        UpdateEnergyIcons();
         endTurnButton.interactable = myTurn;
     }
 
@@ -289,10 +300,24 @@ public class MainGameManager : NetworkBehaviour
         if (NetworkManager.Singleton.LocalClientId == targetClientId)
         {
             energy = Mathf.Min(5, energy + 1);
-            energyText.text = $"Energy: {energy}/5";
+            UpdateEnergyIcons();
             feedbackText.text = "⚡ +1 Energy!";
         }
     }
+
+    private void UpdateEnergyIcons()
+    {
+        if (energySlots == null || energySlots.Length == 0) return;
+
+        for (int i = 0; i < energySlots.Length; i++)
+        {
+            if (i < energy)
+                energySlots[i].sprite = energyFilledSprite;
+            else
+                energySlots[i].sprite = energyEmptySprite;
+        }
+    }
+
 
     [ClientRpc]
     void UpdateAllClientsUIClientRpc()

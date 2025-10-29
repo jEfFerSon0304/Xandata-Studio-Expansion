@@ -73,14 +73,14 @@ public class TurnOrderPopupUI : MonoBehaviour
             if (string.IsNullOrEmpty(charName))
                 charName = $"Player {clientId}";
 
-            string colorHex = "FFFFFF";
+            string colorHex = "000000";
             var data = GameDatabase.Instance?.GetCharacterData(clientId);
             if (data != null)
                 colorHex = ColorUtility.ToHtmlStringRGB(data.themeColor);
 
             int trophyCount = GameState.Instance.GetTrophyCount(clientId);
 
-            text.text = $"<b>{position}.</b> <color=#{colorHex}>{charName}</color> ⭐x{trophyCount}";
+            text.text = $"<b>{position}.</b> <color=#{colorHex = "000000"}>{charName}</color> {trophyCount} Star";
             position++;
         }
     }

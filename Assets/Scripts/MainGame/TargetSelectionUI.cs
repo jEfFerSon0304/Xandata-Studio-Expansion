@@ -82,7 +82,7 @@ public class TargetSelectionUI : MonoBehaviour
             return;
         }
 
-        foreach (var clientId in gs.turnOrder)
+        foreach (var clientId in gs.GetCurrentTurnOrder())
         {
             if (clientId == NetworkManager.Singleton.LocalClientId)
                 continue;
@@ -118,9 +118,6 @@ public class TargetSelectionUI : MonoBehaviour
 
     private void OnTargetChosen(ulong targetClientId)
     {
-        if (panelRoot != null)
-            panelRoot.SetActive(false);
-
         if (manager != null && pendingSkill != null)
         {
             manager.OnTargetSelected(pendingSkill, targetClientId);
@@ -129,17 +126,23 @@ public class TargetSelectionUI : MonoBehaviour
         {
             Debug.LogWarning("[TargetUI] Missing manager or skill reference on target select.");
         }
+
+        // Always close afterwards
+        Close();
+
     }
 
     public void Close()
     {
+        // Hide both the panel and this UI container
         if (panelRoot != null)
             panelRoot.SetActive(false);
 
-        // ✅ Also hide the whole object
         gameObject.SetActive(false);
-        targetSelectionUI.gameObject.SetActive(false);
-        targetUIPanel.gameObject.SetActive(false);
+
+        Debug.Log("[TargetUI] Closed Target Selection UI.");
     }
+
+
 
 }
