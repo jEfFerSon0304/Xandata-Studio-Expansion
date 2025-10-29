@@ -45,7 +45,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 3469325919
+  GlobalObjectIdHash: 3553208874
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -71,9 +71,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MainGameManager
   ShowTopMostFoldoutHeaderGroup: 1
-  turnText: {fileID: 0}
+  headerText: {fileID: 0}
   energyText: {fileID: 0}
   feedbackText: {fileID: 0}
   handPanel: {fileID: 0}
   skillCardPrefab: {fileID: 3084074152203410243, guid: e12d22c7e9f3f0c41a0334b1d51827d7, type: 3}
   endTurnButton: {fileID: 0}
+  targetSelectionUI: {fileID: 0}
+  attackPopupPrefab: {fileID: 0}

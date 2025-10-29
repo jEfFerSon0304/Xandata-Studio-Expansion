@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using Unity.Netcode;
 using System.Collections.Generic;
+using System.Linq;
 
 public class GameState : NetworkBehaviour
 {
@@ -8,6 +9,12 @@ public class GameState : NetworkBehaviour
 
     public NetworkList<ulong> turnOrder = new NetworkList<ulong>();
     public NetworkVariable<int> currentTurnIndex = new(0);
+
+    // 🏆 Trophy tracking
+    private Dictionary<ulong, int> trophies = new();
+
+    public delegate void TurnOrderChanged();
+    public static event TurnOrderChanged OnTurnOrderChangedEvent;
 
     private void Awake()
     {
@@ -24,22 +31,16 @@ public class GameState : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         if (IsServer)
-        {
             Debug.Log("[GameState] Spawned and synced across clients.");
-        }
     }
 
     public ulong CurrentPlayerId =>
         turnOrder.Count > 0 ? turnOrder[currentTurnIndex.Value] : ulong.MaxValue;
 
-    /// <summary>
-    /// Called by MainGameManager when ending a turn.
-    /// </summary>
     public void AdvanceTurn()
     {
         if (!IsServer) return;
 
-        // Move to next player
         for (int i = 0; i < turnOrder.Count; i++)
         {
             currentTurnIndex.Value = (currentTurnIndex.Value + 1) % turnOrder.Count;
@@ -47,19 +48,18 @@ public class GameState : NetworkBehaviour
 
             if (nextPlayer == null) continue;
 
-            // Skip stunned players
             if (nextPlayer.isStunned.Value)
             {
                 Debug.Log($"[Turn] Player {nextPlayer.OwnerClientId} is stunned. Skipping turn.");
-                nextPlayer.isStunned.Value = false; // clear stun after skip
+                nextPlayer.isStunned.Value = false;
                 continue;
             }
 
-            // Found valid player
             break;
         }
 
         Debug.Log($"[Turn] Now it's player {CurrentPlayerId}'s turn.");
+        SyncTurnOrderClientRpc(BuildTurnStateArray());
     }
 
     private PlayerNetwork FindPlayerNetwork(ulong clientId)
@@ -68,5 +68,101 @@ public class GameState : NetworkBehaviour
             if (pn.OwnerClientId == clientId)
                 return pn;
         return null;
+    }
+
+    // ===============================================================
+    // 🏆 TROPHY SYSTEM
+    // ===============================================================
+
+    [ServerRpc(RequireOwnership = false)]
+    public void AddTrophyServerRpc(ulong clientId)
+    {
+        if (!trophies.ContainsKey(clientId))
+            trophies[clientId] = 0;
+
+        trophies[clientId]++;
+        MovePlayerToLast(clientId);
+        Debug.Log($"[Trophy] Player {clientId} gained a trophy! Total: {trophies[clientId]}");
+
+        SyncTurnOrderClientRpc(BuildTurnStateArray());
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void RemoveTrophyServerRpc(ulong clientId)
+    {
+        if (!trophies.ContainsKey(clientId)) return;
+
+        trophies[clientId] = Mathf.Max(0, trophies[clientId] - 1);
+        Debug.Log($"[Trophy] Player {clientId} lost a trophy. Total: {trophies[clientId]}");
+
+        SyncTurnOrderClientRpc(BuildTurnStateArray());
+    }
+
+    private void MovePlayerToLast(ulong clientId)
+    {
+        if (!turnOrder.Contains(clientId)) return;
+
+        turnOrder.Remove(clientId);
+        turnOrder.Add(clientId);
+        Debug.Log($"[TurnOrder] Player {clientId} moved to last place.");
+    }
+
+    // ===============================================================
+    // 📡 SYNC TURN ORDER & TROPHIES
+    // ===============================================================
+
+    [ClientRpc]
+    private void SyncTurnOrderClientRpc(TurnState[] data)
+    {
+        if (!IsOwner)
+        {
+            turnOrder.Clear();
+            foreach (var t in data)
+                turnOrder.Add(t.clientId);
+
+            trophies.Clear();
+            foreach (var t in data)
+                trophies[t.clientId] = t.trophyCount;
+        }
+
+        OnTurnOrderChangedEvent?.Invoke();
+    }
+
+    private TurnState[] BuildTurnStateArray()
+    {
+        List<TurnState> states = new List<TurnState>();
+
+        for (int i = 0; i < turnOrder.Count; i++)
+        {
+            ulong id = turnOrder[i];
+            trophies.TryGetValue(id, out int trophyCount);
+
+            states.Add(new TurnState
+            {
+                clientId = id,
+                trophyCount = trophyCount
+            });
+        }
+
+        return states.ToArray();
+    }
+
+
+    public int GetTrophyCount(ulong clientId)
+    {
+        return trophies.TryGetValue(clientId, out int count) ? count : 0;
+    }
+
+    [System.Serializable]
+    public struct TurnState : INetworkSerializable
+    {
+        public ulong clientId;
+        public int trophyCount;
+
+        public void NetworkSerialize<T>(BufferSerializer<T> s) where T : IReaderWriter
+        {
+            s.SerializeValue(ref clientId);
+            s.SerializeValue(ref trophyCount);
+        }
     }
 }
