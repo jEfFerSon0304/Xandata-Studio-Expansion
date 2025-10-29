@@ -125,7 +125,7 @@ public class PlayerNetwork : NetworkBehaviour
     }
 
     [ClientRpc]
-    void SyncCharacterToClientsClientRpc(ulong clientId, int characterIndex, ClientRpcParams rpcParams = default)
+    void SyncCharacterToClientsClientRpc(ulong clientId, int characterIndex)
     {
         if (GameDatabase.Instance != null)
         {
@@ -133,19 +133,4 @@ public class PlayerNetwork : NetworkBehaviour
             Debug.Log($"[Sync] Client received character {characterIndex} for player {clientId}");
         }
     }
-
-
-    [ServerRpc(RequireOwnership = false)]
-    public void RequestCharacterSyncServerRpc(ServerRpcParams rpcParams = default)
-    {
-        ulong senderId = rpcParams.Receive.SenderClientId;
-        Debug.Log($"[PlayerNetwork] Client {senderId} requested character sync.");
-
-        foreach (var pn in FindObjectsByType<PlayerNetwork>(FindObjectsSortMode.None))
-        {
-            SyncCharacterToClientsClientRpc(pn.OwnerClientId, pn.SelectedCharacterIndex.Value,
-                new ClientRpcParams { Send = new ClientRpcSendParams { TargetClientIds = new[] { senderId } } });
-        }
-    }
-
 }

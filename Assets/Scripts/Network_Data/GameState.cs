@@ -135,19 +135,8 @@ public class GameState : NetworkBehaviour
 
         Debug.Log($"[SyncTurnOrderClientRpc] Updated cached turn order: {string.Join(", ", cachedTurnOrder)}");
 
-        if (OnTurnOrderChangedEvent != null)
-        {
-            Debug.Log("[GameState] Invoking OnTurnOrderChangedEvent (UI will refresh).");
-            OnTurnOrderChangedEvent.Invoke();
-        }
-
-    }
-
-    public static void NotifyTurnOrderChanged()
-    {
         OnTurnOrderChangedEvent?.Invoke();
     }
-
 
 
     public IEnumerable<ulong> GetCurrentTurnOrder()
@@ -210,34 +199,4 @@ public class GameState : NetworkBehaviour
             s.SerializeValue(ref trophyCount);
         }
     }
-
-    [ServerRpc(RequireOwnership = false)]
-    public void RequestInitialTurnOrderServerRpc(ServerRpcParams rpcParams = default)
-    {
-        ulong senderId = rpcParams.Receive.SenderClientId;
-        Debug.Log($"[GameState] Client {senderId} requested initial turn order.");
-
-        // Build current state array and send only to that client
-        var data = BuildTurnStateArray();
-        SyncTurnOrderToClientRpc(data, new ClientRpcParams
-        {
-            Send = new ClientRpcSendParams { TargetClientIds = new[] { senderId } }
-        });
-    }
-
-    [ClientRpc]
-    private void SyncTurnOrderToClientRpc(TurnState[] data, ClientRpcParams rpcParams = default)
-    {
-        cachedTurnOrder.Clear();
-        foreach (var t in data)
-            cachedTurnOrder.Add(t.clientId);
-
-        trophies.Clear();
-        foreach (var t in data)
-            trophies[t.clientId] = t.trophyCount;
-
-        Debug.Log("[GameState] Initial turn order sync received from server.");
-        NotifyTurnOrderChanged();
-    }
-
 }
