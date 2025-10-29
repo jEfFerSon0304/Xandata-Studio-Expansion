@@ -54,6 +54,7 @@ public class MainGameTrophyWidget : MonoBehaviour
             {
                 // ✅ Call AddTrophyServerRpc (moves player to last)
                 GameState.Instance.AddTrophyServerRpc(myClientId);
+                GameState.NotifyTurnOrderChanged();
                 Debug.Log($"[TrophyWidget] Player {myClientId} added a star!");
             }
 
