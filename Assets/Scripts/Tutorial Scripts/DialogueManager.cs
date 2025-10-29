@@ -19,14 +19,14 @@ public class DialogueManager : MonoBehaviour
     public float typeSpeed = 0.04f;
 
     [Header("UI References")]
-    public EnergyIconGlow energyIconController; // assign your Energy icon here
+    public EnergyIconGlow energyIconController; // single orb for Line 2
+    public EnergyOrbsController energyOrbsController; // 3 orbs for Line 3
 
     private AudioSource voiceSource;
     private int index = 0;
     private bool isTyping = false;
     private bool dialogueFullyShown = false;
 
-    // Music duck settings
     public float musicDuckVolume = 0.3f;
     public float musicRestoreVolume = 1f;
 
@@ -36,21 +36,19 @@ public class DialogueManager : MonoBehaviour
     public CardRevealController cardRevealController;
 
     private bool cardDropped = false;
-
-    // Prevent multiple swoops
     private bool tidalCardShown = false;
     private bool dropZoneShown = false;
     private bool energyIconShown = false;
+    private bool energyOrbsShown = false;
 
-    [Header("Card Animation Settings")]
     public float swoopHeight = 200f;
     public float swoopDuration = 0.6f;
 
     private string[] lines = {
         "Hey there, Explorer! You must be new around here, huh? Starla is your guide to the islands! Ready to see how the Wild Clash works?",
         "Alright! Before you dive into battle, Starla has to tell you about something super important—Energy!",
-        "Every ability you use costs Energy. See those glowing orbs? You start with one and you'll recharge another after every single round!",
-        "Let's try it out! You've got three Energy right now, so let's use it to activate this card — Tidal Reversal!",
+        "Every ability you use costs Energy. See those glowing orbs? You start with three and you'll recharge another one after every single round!",
+        "Let's try it out! You've got three Energy right now, so let's use it to activate this card — Stampede!",
         "Go ahead! Drag that card right into the drop zone! Come on, come on, let's see it in action!",
         "Whoa, nice one! That's how you use your abilities! See? Every move you make can change the game, Starla told you so!",
         "Some abilities power you up, others drain your rivals dry, and some... do both. So, Explorer, you have to pick your moments carefully!",
@@ -71,12 +69,15 @@ public class DialogueManager : MonoBehaviour
         tidalCard.SetActive(false);
         dropZone.SetActive(false);
 
-        // Start hidden, scale 0
-        energyIconController.energyIcon.transform.localScale = Vector3.zero;
+        // Prepare single energy icon
+        var iconGO = energyIconController.energyIcon.gameObject;
+        iconGO.transform.localScale = Vector3.one;
         Color c = energyIconController.energyIcon.color;
         c.a = 0f;
         energyIconController.energyIcon.color = c;
-        energyIconController.energyIcon.gameObject.SetActive(false);
+        if (!iconGO.GetComponent<CanvasGroup>())
+            iconGO.AddComponent<CanvasGroup>();
+        iconGO.SetActive(true);
 
         StartCoroutine(StartSequence());
     }
@@ -122,15 +123,21 @@ public class DialogueManager : MonoBehaviour
             voiceSource.Play();
         }
 
-        // --- Line 2 Energy swoop at start ---
+        // Line 2: single energy icon
         if (index == 1 && !energyIconShown)
         {
             energyIconShown = true;
-            energyIconController.energyIcon.gameObject.SetActive(true);
-            energyIconController.ShowIcon(); // swoop + glow
+            energyIconController.ShowIcon();
         }
 
-        // Trigger card/drop zone if Line 4 or 5
+        // Line 3: 3 energy orbs swoop immediately
+        if (index == 2 && !energyOrbsShown)
+        {
+            energyOrbsShown = true;
+            energyOrbsController.ShowOrbs();
+        }
+
+        // Line 4-5: card and drop zone swoop
         if (index == 3 && !tidalCardShown)
         {
             tidalCardShown = true;
@@ -173,18 +180,15 @@ public class DialogueManager : MonoBehaviour
             starlaAnimator.StopTalking();
             SoundManager.Instance.SetMusicVolume(musicRestoreVolume);
 
-            // Make sure swoops appear if skipped
             if (index == 1 && !energyIconShown)
-            {
-                energyIconShown = true;
-                energyIconController.energyIcon.gameObject.SetActive(true);
                 energyIconController.ShowIcon();
+            if (index == 2 && !energyOrbsShown)
+            {
+                energyOrbsShown = true;
+                energyOrbsController.ShowOrbs();
             }
             if (index == 3 && !tidalCardShown)
-            {
-                tidalCardShown = true;
                 swoopCoroutineCard = StartCoroutine(SwoopIn(tidalCard));
-            }
             if (index == 4 && !dropZoneShown)
             {
                 dropZoneShown = true;
@@ -193,18 +197,14 @@ public class DialogueManager : MonoBehaviour
             }
 
             if (index == lines.Length - 1)
-            {
                 StartCoroutine(FadeAndLoadMainMenu());
-            }
             return;
         }
 
-        // Fade out Energy icon when advancing to Line 3
         if (index == 1 && energyIconShown)
-        {
             StartCoroutine(FadeOutCanvasGroup(energyIconController.energyIcon.GetComponent<CanvasGroup>(), 0.5f));
-            energyIconShown = false;
-        }
+        if (index == 2)
+            energyOrbsController.FadeOutOrbs(0.5f);
 
         if (dialogueFullyShown)
         {
@@ -222,18 +222,15 @@ public class DialogueManager : MonoBehaviour
         }
     }
 
-    // --- Swoop animation ---
     private IEnumerator SwoopIn(GameObject obj)
     {
         obj.SetActive(true);
-
-        CanvasGroup cg = obj.GetComponent<CanvasGroup>();
-        if (cg == null) cg = obj.AddComponent<CanvasGroup>();
+        CanvasGroup cg = obj.GetComponent<CanvasGroup>() ?? obj.AddComponent<CanvasGroup>();
         cg.alpha = 1f;
 
         RectTransform rt = obj.GetComponent<RectTransform>();
         Vector3 targetPos = rt.localPosition;
-        Vector3 startPos = targetPos + new Vector3(0, swoopHeight, 0);
+        Vector3 startPos = targetPos + Vector3.up * swoopHeight;
         rt.localPosition = startPos;
 
         float elapsed = 0f;
@@ -241,7 +238,7 @@ public class DialogueManager : MonoBehaviour
         {
             elapsed += Time.deltaTime;
             float t = elapsed / swoopDuration;
-            float height = 4 * swoopHeight * t * (1 - t); // arc motion
+            float height = 4 * swoopHeight * t * (1 - t);
             rt.localPosition = Vector3.Lerp(startPos, targetPos, t) + new Vector3(0, height, 0);
             yield return null;
         }
@@ -260,21 +257,23 @@ public class DialogueManager : MonoBehaviour
             yield return null;
         }
         cg.alpha = 0f;
-        cg.gameObject.SetActive(false);
     }
 
     public void OnCardDropped()
     {
         cardDropped = true;
-
         dropZone.SetActive(false);
         tidalCard.SetActive(false);
 
+        // 1️⃣ Cut off dialogue voice line if still playing
+        if (voiceSource != null && voiceSource.isPlaying)
+            voiceSource.Stop();
+
+        // 2️⃣ Start card reveal animation
         if (index == 4 && cardRevealController != null)
-        {
             StartCoroutine(PlayRevealThenContinue());
-        }
     }
+
 
     private IEnumerator PlayRevealThenContinue()
     {
