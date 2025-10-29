@@ -4969,6 +4969,7 @@ GameObject:
   m_Component:
   - component: {fileID: 282821490}
   - component: {fileID: 282821489}
+  - component: {fileID: 282821491}
   - component: {fileID: 282821488}
   - component: {fileID: 282821487}
   m_Layer: 5
@@ -5063,6 +5064,24 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!114 &282821491
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 282821486}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f9e7642fc8be28418546623cbe7d633, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlaySFXTrigger
+  sfxClip: {fileID: 8300000, guid: cfe276d5a984c1745bf7b17963f4f847, type: 3}
+  playOnStart: 1
+  delay: 0.2
+  onPlaySFX:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &410049658
 GameObject:
   m_ObjectHideFlags: 0
@@ -5120,7 +5139,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 0bb7391515603c742bad19c15337712b, type: 3}
+  m_Sprite: {fileID: 21300000, guid: b222730931ddb1949aac9540bf169824, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -5564,16 +5583,16 @@ RectTransform:
   m_GameObject: {fileID: 1417471336}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.135, y: 0.135, z: 0.135}
+  m_LocalScale: {x: 0.20000002, y: 0.20000002, z: 0.20000002}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 282821490}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 26, y: -31}
+  m_AnchoredPosition: {x: 319, y: -191}
   m_SizeDelta: {x: 3072.8516, y: 1805.0002}
-  m_Pivot: {x: 0, y: 1}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1417471338
 MonoBehaviour:
   m_ObjectHideFlags: 0

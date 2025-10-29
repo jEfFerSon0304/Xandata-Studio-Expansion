@@ -36,14 +36,17 @@ public class SplashController : MonoBehaviour
 
     void Update()
     {
-        // Detect skip input using new Input System
         if (!skipRequested)
         {
-            // Check for mouse click or touchscreen tap
             if ((Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) ||
                 (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasPressedThisFrame))
             {
                 skipRequested = true;
+
+                // Stop logo SFX if it’s playing
+                PlaySFXTrigger logoSFX = FindObjectOfType<PlaySFXTrigger>();
+                if (logoSFX != null)
+                    logoSFX.StopSFX();
             }
         }
     }

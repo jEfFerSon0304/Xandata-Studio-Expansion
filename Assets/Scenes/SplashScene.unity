@@ -549,6 +549,7 @@ GameObject:
   - component: {fileID: 966979506}
   - component: {fileID: 966979505}
   - component: {fileID: 966979504}
+  - component: {fileID: 966979507}
   m_Layer: 5
   m_Name: Canvas_Splash
   m_TagString: Untagged
@@ -641,6 +642,24 @@ Canvas:
   m_SortingLayerID: 0
   m_SortingOrder: 0
   m_TargetDisplay: 0
+--- !u!114 &966979507
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 966979502}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f9e7642fc8be28418546623cbe7d633, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlaySFXTrigger
+  sfxClip: {fileID: 8300000, guid: e03bddedd39244445bea2108b531bcb6, type: 3}
+  playOnStart: 1
+  delay: 0
+  onPlaySFX:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &1078619475
 GameObject:
   m_ObjectHideFlags: 0
@@ -706,12 +725,10 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'This game is a work of fiction.
+  m_text: 'This app is a work of fiction.
 
-    Any resemblance to real persons,
-    living or dead, is purely coincidental.
-
-'
+    Any resemblance to real animals or
+    events is purely coincidental.'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -814,9 +831,9 @@ MonoBehaviour:
   logoImage: {fileID: 156162727}
   reminderText: {fileID: 1078619478}
   fadeOverlay: {fileID: 1806167824}
-  fadeDuration: 1.5
-  logoHoldTime: 2.5
-  reminderHoldTime: 2.5
+  fadeDuration: 1
+  logoHoldTime: 2
+  reminderHoldTime: 2
   nextSceneName: LoadingScreen_Landscape
 --- !u!4 &1128127680
 Transform:
