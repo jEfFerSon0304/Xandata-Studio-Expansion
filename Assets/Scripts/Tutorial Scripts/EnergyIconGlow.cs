@@ -27,7 +27,7 @@ public class EnergyIconGlow : MonoBehaviour
         }
 
         // Save original values
-        originalScale = Vector3.one;
+        originalScale = new Vector3(0.69f, 0.69f, 0.69f); // user preferred
         originalColor = energyIcon.color;
 
         // Start hidden
@@ -35,6 +35,10 @@ public class EnergyIconGlow : MonoBehaviour
         Color c = originalColor;
         c.a = 0f;
         energyIcon.color = c;
+
+        // Ensure CanvasGroup exists
+        if (!energyIcon.GetComponent<CanvasGroup>())
+            energyIcon.gameObject.AddComponent<CanvasGroup>();
     }
 
     public void ShowIcon()
@@ -45,11 +49,11 @@ public class EnergyIconGlow : MonoBehaviour
         c.a = 0f;
         energyIcon.color = c;
 
-        // Stop any previous pulsing
+        // Stop previous pulsing
         if (pulseCoroutine != null)
             StopCoroutine(pulseCoroutine);
 
-        // Start pop-in animation
+        // Start pop + fade-in
         StartCoroutine(PopAndFadeIn());
     }
 
@@ -77,7 +81,6 @@ public class EnergyIconGlow : MonoBehaviour
         {
             t += Time.deltaTime;
             float factor = t / popDuration;
-
             energyIcon.transform.localScale = Vector3.Lerp(originalScale * scaleUp, originalScale, factor);
             yield return null;
         }
@@ -100,7 +103,7 @@ public class EnergyIconGlow : MonoBehaviour
             energyIcon.transform.localScale = originalScale * scale;
 
             // Color pulse
-            float glowFactor = (Mathf.Sin(timer * pulseSpeed * 0.5f) + 1f) / 2f; // 0 → 1
+            float glowFactor = (Mathf.Sin(timer * pulseSpeed * 0.5f) + 1f) / 2f;
             energyIcon.color = Color.Lerp(originalColor, glowColor, glowFactor);
 
             timer += Time.deltaTime;

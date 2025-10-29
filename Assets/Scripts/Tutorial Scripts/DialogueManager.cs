@@ -19,7 +19,7 @@ public class DialogueManager : MonoBehaviour
     public float typeSpeed = 0.04f;
 
     [Header("UI References")]
-    public EnergyIconGlow energyIconController;
+    public EnergyIconGlow energyIconController; // assign your Energy icon here
 
     private AudioSource voiceSource;
     private int index = 0;
@@ -40,9 +40,10 @@ public class DialogueManager : MonoBehaviour
     // Prevent multiple swoops
     private bool tidalCardShown = false;
     private bool dropZoneShown = false;
+    private bool energyIconShown = false;
 
     [Header("Card Animation Settings")]
-    public float swoopHeight = 200f; // height for swoop animation
+    public float swoopHeight = 200f;
     public float swoopDuration = 0.6f;
 
     private string[] lines = {
@@ -69,6 +70,13 @@ public class DialogueManager : MonoBehaviour
         dialogueText.text = "";
         tidalCard.SetActive(false);
         dropZone.SetActive(false);
+
+        // Start hidden, scale 0
+        energyIconController.energyIcon.transform.localScale = Vector3.zero;
+        Color c = energyIconController.energyIcon.color;
+        c.a = 0f;
+        energyIconController.energyIcon.color = c;
+        energyIconController.energyIcon.gameObject.SetActive(false);
 
         StartCoroutine(StartSequence());
     }
@@ -114,13 +122,20 @@ public class DialogueManager : MonoBehaviour
             voiceSource.Play();
         }
 
-        // Trigger card/drop zone if Line 4 or 5 and not already shown
+        // --- Line 2 Energy swoop at start ---
+        if (index == 1 && !energyIconShown)
+        {
+            energyIconShown = true;
+            energyIconController.energyIcon.gameObject.SetActive(true);
+            energyIconController.ShowIcon(); // swoop + glow
+        }
+
+        // Trigger card/drop zone if Line 4 or 5
         if (index == 3 && !tidalCardShown)
         {
             tidalCardShown = true;
             swoopCoroutineCard = StartCoroutine(SwoopIn(tidalCard));
         }
-
         if (index == 4 && !dropZoneShown)
         {
             dropZoneShown = true;
@@ -133,15 +148,6 @@ public class DialogueManager : MonoBehaviour
         {
             dialogueText.text += line[i];
             yield return new WaitForSeconds(typeSpeed);
-
-            if (index == 1)
-            {
-                int energyWordEnd = line.IndexOf("Energy!") + "Energy!".Length - 1;
-                if (i == energyWordEnd && !energyIconController.energyIcon.gameObject.activeSelf)
-                {
-                    energyIconController.ShowIcon();
-                }
-            }
         }
 
         isTyping = false;
@@ -152,14 +158,71 @@ public class DialogueManager : MonoBehaviour
 
         starlaAnimator.StopTalking();
         SoundManager.Instance.SetMusicVolume(musicRestoreVolume);
+    }
 
-        // Wait for card drop on Line 5
-        if (index == 4)
+    public void OnDialogueBoxClick()
+    {
+        if (isTyping)
         {
-            yield return new WaitUntil(() => cardDropped);
+            if (typingCoroutine != null) StopCoroutine(typingCoroutine);
+            dialogueText.text = lines[index];
+            isTyping = false;
+            dialogueFullyShown = true;
+
+            voiceSource.Stop();
+            starlaAnimator.StopTalking();
+            SoundManager.Instance.SetMusicVolume(musicRestoreVolume);
+
+            // Make sure swoops appear if skipped
+            if (index == 1 && !energyIconShown)
+            {
+                energyIconShown = true;
+                energyIconController.energyIcon.gameObject.SetActive(true);
+                energyIconController.ShowIcon();
+            }
+            if (index == 3 && !tidalCardShown)
+            {
+                tidalCardShown = true;
+                swoopCoroutineCard = StartCoroutine(SwoopIn(tidalCard));
+            }
+            if (index == 4 && !dropZoneShown)
+            {
+                dropZoneShown = true;
+                cardDropped = false;
+                swoopCoroutineDropZone = StartCoroutine(SwoopIn(dropZone));
+            }
+
+            if (index == lines.Length - 1)
+            {
+                StartCoroutine(FadeAndLoadMainMenu());
+            }
+            return;
+        }
+
+        // Fade out Energy icon when advancing to Line 3
+        if (index == 1 && energyIconShown)
+        {
+            StartCoroutine(FadeOutCanvasGroup(energyIconController.energyIcon.GetComponent<CanvasGroup>(), 0.5f));
+            energyIconShown = false;
+        }
+
+        if (dialogueFullyShown)
+        {
+            if (index == 4 && !cardDropped) return;
+
+            if (index < lines.Length - 1)
+            {
+                index++;
+                typingCoroutine = StartCoroutine(TypeLine(lines[index]));
+            }
+            else
+            {
+                StartCoroutine(FadeAndLoadMainMenu());
+            }
         }
     }
 
+    // --- Swoop animation ---
     private IEnumerator SwoopIn(GameObject obj)
     {
         obj.SetActive(true);
@@ -178,22 +241,35 @@ public class DialogueManager : MonoBehaviour
         {
             elapsed += Time.deltaTime;
             float t = elapsed / swoopDuration;
-            float height = 4 * swoopHeight * t * (1 - t);
+            float height = 4 * swoopHeight * t * (1 - t); // arc motion
             rt.localPosition = Vector3.Lerp(startPos, targetPos, t) + new Vector3(0, height, 0);
             yield return null;
         }
         rt.localPosition = targetPos;
     }
 
+    private IEnumerator FadeOutCanvasGroup(CanvasGroup cg, float duration)
+    {
+        if (cg == null) yield break;
+        float startAlpha = cg.alpha;
+        float t = 0f;
+        while (t < duration)
+        {
+            t += Time.deltaTime;
+            cg.alpha = Mathf.Lerp(startAlpha, 0f, t / duration);
+            yield return null;
+        }
+        cg.alpha = 0f;
+        cg.gameObject.SetActive(false);
+    }
+
     public void OnCardDropped()
     {
         cardDropped = true;
 
-        // Hide drop zone and tidal card
         dropZone.SetActive(false);
         tidalCard.SetActive(false);
 
-        // Trigger card reveal and wait for it to finish
         if (index == 4 && cardRevealController != null)
         {
             StartCoroutine(PlayRevealThenContinue());
@@ -202,81 +278,17 @@ public class DialogueManager : MonoBehaviour
 
     private IEnumerator PlayRevealThenContinue()
     {
-        yield return cardRevealController.RevealCoroutine("Stampede"); // text swoosh
-        index++; // go to line 6
+        yield return cardRevealController.RevealCoroutine("Stampede");
+        index++;
         typingCoroutine = StartCoroutine(TypeLine(lines[index]));
-    }
-
-    public void OnDialogueBoxClick()
-    {
-        // Skip typing if in progress
-        if (isTyping)
-        {
-            if (typingCoroutine != null) StopCoroutine(typingCoroutine);
-            dialogueText.text = lines[index];
-            isTyping = false;
-            dialogueFullyShown = true;
-
-            voiceSource.Stop();
-            starlaAnimator.StopTalking();
-            SoundManager.Instance.SetMusicVolume(musicRestoreVolume);
-
-            // Make sure card/drop zone appear if skipped
-            if (index == 3 && !tidalCardShown)
-            {
-                tidalCardShown = true;
-                swoopCoroutineCard = StartCoroutine(SwoopIn(tidalCard));
-            }
-            if (index == 4 && !dropZoneShown)
-            {
-                dropZoneShown = true;
-                cardDropped = false;
-                swoopCoroutineDropZone = StartCoroutine(SwoopIn(dropZone));
-            }
-
-            // Check if last line skipped
-            if (index == lines.Length - 1)
-            {
-                StartCoroutine(FadeAndLoadMainMenu());
-            }
-
-            return;
-        }
-
-        if (dialogueFullyShown)
-        {
-            // Line 5 block: do not proceed until cardDropped
-            if (index == 4 && !cardDropped)
-            {
-                Debug.Log("Must drop card before proceeding!");
-                return;
-            }
-
-            if (index < lines.Length - 1)
-            {
-                index++;
-                typingCoroutine = StartCoroutine(TypeLine(lines[index]));
-            }
-            else
-            {
-                // Last line fully shown, wait for click to fade
-                StartCoroutine(FadeAndLoadMainMenu());
-            }
-        }
     }
 
     private IEnumerator FadeAndLoadMainMenu()
     {
-        // Disable interactions
         dialogueBox.SetActive(false);
         starlaAnimator.gameObject.SetActive(false);
 
-        // Fade whole screen using FadeScript
         yield return screenFade.FadeOut();
-
-        // Load main menu after fade finishes
         SceneManager.LoadScene("MainMenu");
     }
-
-
 }
