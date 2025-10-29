@@ -19,6 +19,8 @@ public class SkillCardUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
 
     [HideInInspector] public MainGameManager manager;
     [HideInInspector] public CharacterDataSO.SkillData skillData;
+    [HideInInspector] public int slotIndex; // assigned by MainGameManager or HandPanel
+
 
     private CanvasGroup canvasGroup;
     private RectTransform rectTransform;
@@ -58,7 +60,7 @@ public class SkillCardUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
     }
 
     // ------------------------------------------------
-    // 🪄 Realistic Flip Animation
+    // 🪄 Card Flip
     // ------------------------------------------------
     public void OnPointerClick(PointerEventData eventData)
     {
@@ -73,9 +75,7 @@ public class SkillCardUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
         float elapsed = 0f;
 
         Vector3 startRotation = rectTransform.localEulerAngles;
-        Vector3 endRotation = startRotation + new Vector3(0, 180f, 0);
 
-        // 🌀 First half: rotate to edge
         while (elapsed < halfDuration)
         {
             float angle = Mathf.Lerp(0, 90, elapsed / halfDuration);
@@ -84,12 +84,10 @@ public class SkillCardUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
             yield return null;
         }
 
-        // 🔁 Switch sides at the halfway point
         isFlipped = !isFlipped;
         frontSide.SetActive(!isFlipped);
         backSide.SetActive(isFlipped);
 
-        // 🌀 Second half: complete rotation
         elapsed = 0f;
         while (elapsed < halfDuration)
         {
@@ -99,7 +97,6 @@ public class SkillCardUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
             yield return null;
         }
 
-        // ✅ Reset rotation (avoid cumulative rotation)
         rectTransform.localEulerAngles = Vector3.zero;
     }
 
@@ -112,12 +109,15 @@ public class SkillCardUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
     }
 
     // ------------------------------------------------
-    // 🖱️ Drag Logic (unchanged, but stable)
+    // 🖱️ Drag Logic
     // ------------------------------------------------
     public void OnBeginDrag(PointerEventData eventData)
     {
         startPos = rectTransform.anchoredPosition;
         originalParent = transform.parent;
+
+        // Store current slot position (so we can return exactly)
+        slotIndex = transform.GetSiblingIndex();
 
         if (layoutGroup != null)
             layoutGroup.enabled = false;
@@ -133,6 +133,7 @@ public class SkillCardUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
         isDragging = true;
     }
 
+
     public void OnDrag(PointerEventData eventData)
     {
         if (!isDragging || rectTransform == null || mainCanvas == null)
@@ -146,8 +147,9 @@ public class SkillCardUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
         if (!isDragging)
             return;
 
+        // Return to hand panel and original order
         transform.SetParent(originalParent, true);
-        rectTransform.anchoredPosition = startPos;
+        transform.SetSiblingIndex(slotIndex); // 👈 restores exact position order
 
         if (layoutGroup != null)
             layoutGroup.enabled = true;
@@ -158,6 +160,29 @@ public class SkillCardUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
             canvasGroup.alpha = 1f;
         }
 
+        StartCoroutine(SmoothReturn(startPos, 0.25f));
         isDragging = false;
     }
+
+
+    // ------------------------------------------------
+    // ✨ Smooth Return Animation
+    // ------------------------------------------------
+    private IEnumerator SmoothReturn(Vector2 targetPos, float duration)
+    {
+        Vector2 initialPos = rectTransform.anchoredPosition;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            float t = elapsed / duration;
+            t = 1f - Mathf.Pow(1f - t, 3f); // ease-out bounce
+            rectTransform.anchoredPosition = Vector2.Lerp(initialPos, targetPos, t);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        rectTransform.anchoredPosition = targetPos;
+    }
+
 }

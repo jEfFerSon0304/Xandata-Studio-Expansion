@@ -24,6 +24,9 @@ public class MainGameManager : NetworkBehaviour
     public TargetSelectionUI targetSelectionUI;
     public GameObject attackPopupPrefab;
 
+    [Header("Skill Reveal UI")]
+    public SkillRevealUI skillRevealUI;
+
     private CharacterDataSO myCharacter;
     private int energy = 5;
     private bool initialized = false;
@@ -157,6 +160,8 @@ public class MainGameManager : NetworkBehaviour
     {
         energy -= skill.energyCost;
         UpdateUI();
+
+        skillRevealUI.ShowSkill(skill);
 
         RequestSkillUseServerRpc(skill.skillName, targetClientId);
     }
