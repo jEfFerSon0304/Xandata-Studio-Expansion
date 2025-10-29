@@ -82,22 +82,46 @@ public class GameState : NetworkBehaviour
 
         Debug.Log($"[Trophy] Player {clientId} gained a trophy! Total: {trophies[clientId]}");
 
-        // 🟢 Check win condition
+        // 🏆 Check if this player reached 3 stars
         if (trophies[clientId] >= 3)
         {
-            Debug.Log($"[WIN] Player {clientId} reached 3 stars — sending to VictoryScene!");
-            SendPlayerToVictoryClientRpc(clientId, new ClientRpcParams
-            {
-                Send = new ClientRpcSendParams
-                {
-                    TargetClientIds = new[] { clientId }
-                }
-            });
+            Debug.Log($"[WIN] Player {clientId} reached 3 stars — everyone goes to VictoryScene!");
+            StartCoroutine(HandleGameOverForAll(clientId));
             return;
         }
 
         StartCoroutine(SendSyncDelayed());
     }
+
+    private IEnumerator HandleGameOverForAll(ulong winnerClientId)
+    {
+        yield return new WaitForSeconds(1f); // small delay for smoothness
+
+        // Optionally save the winner info for the next scene
+        PlayerPrefs.SetString("WinnerClientId", winnerClientId.ToString());
+
+        // 🧠 Send the winner to all clients so they know who won
+        LoadVictorySceneForAllClientRpc(winnerClientId);
+    }
+
+    [ClientRpc]
+    private void LoadVictorySceneForAllClientRpc(ulong winnerClientId)
+    {
+        string winnerName = GameDatabase.Instance != null
+            ? GameDatabase.Instance.GetCharacterName(winnerClientId)
+            : $"Player {winnerClientId}";
+
+        Debug.Log($"[Victory] {winnerName} reached 3 stars — loading Victory Scene for all players!");
+
+        // Save winner name for the next scene display
+        PlayerPrefs.SetString("WinnerName", winnerName);
+
+        // 🏁 Load the victory scene (all clients)
+        UnityEngine.SceneManagement.SceneManager.LoadScene("VictoryScene");
+    }
+
+
+
 
     [ClientRpc]
     private void SendPlayerToVictoryClientRpc(ulong clientId, ClientRpcParams rpcParams = default)
